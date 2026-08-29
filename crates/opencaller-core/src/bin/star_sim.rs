@@ -164,6 +164,59 @@ fn main() {
       }
     }
     println!();
+
+    // §5.5.1 research option — chaff. Each user submits one chaff report to
+    // a random allocated number with 5% probability. Question: does it blur
+    // what a targeted probe learns?
+    let mut chaff: Vec<Report> = Vec::new();
+    for _ in 0..USERS {
+      if rng.gen_bool(0.05) {
+        chaff.push(Report {
+          number: format!("+1{}", rng.gen_range(2_000_000_000u64..9_999_999_999)),
+          category: Category::from_u8(rng.gen_range(0..6)).unwrap(),
+          country: "US".into(),
+        });
+      }
+    }
+    println!("━━━ Chaff evaluation (rate 5% → {} chaff reports) ━━━", chaff.len());
+
+    let combined: Vec<Vec<u8>> = reports
+      .iter()
+      .chain(chaff.iter())
+      .map(|r| create_report_message(r, K, EPOCH, &mode).unwrap())
+      .collect();
+    let with_chaff = aggregate(&combined, K, EPOCH);
+
+    let baseline_recovered: Vec<&str> =
+      outcome.recovered.iter().map(|b| b.number.as_str()).collect();
+    let chaff_recovered: Vec<&str> =
+      with_chaff.recovered.iter().map(|b| b.number.as_str()).collect();
+    println!(
+      "  published DB unchanged: {}  (recovered set {:?})",
+      baseline_recovered == chaff_recovered,
+      chaff_recovered
+    );
+    println!(
+      "  sealed buckets: {} → {}  (bucket-size histogram noised — distributional cover)",
+      outcome.sealed.len(),
+      with_chaff.sealed.len()
+    );
+    let tag_b = probe_tag(CAMPAIGN_B, K, EPOCH, &mode).unwrap();
+    let count_before = outcome.sealed.iter().find(|s| s.tag == tag_b).map_or(0, |s| s.count);
+    let count_after = with_chaff.sealed.iter().find(|s| s.tag == tag_b).map_or(0, |s| s.count);
+    println!("  targeted probe of {CAMPAIGN_B}: ×{count_before} → ×{count_after}");
+    println!(
+      "  cost: {} extra tokens, ~{} KB extra relay traffic",
+      chaff.len(),
+      chaff.len() * 259 / 1000
+    );
+    println!(
+      "  FINDING: uniform chaff in a ~10^10 space almost never lands on any\n\
+       \x20 given number — targeted probe counts are NOT blurred. Chaff only\n\
+       \x20 obscures aggregate shape (how many distinct numbers got reported).\n\
+       \x20 Targeted-probe defense stays with token gating, the institutional\n\
+       \x20 split, and epoch puncturing.\n"
+    );
   }
 
   // Epoch ends: the randomness server punctures the epoch tag. Even a full

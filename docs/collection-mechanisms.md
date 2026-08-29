@@ -177,13 +177,18 @@ epochs, and stale sub-threshold reports expire by construction.
    - Sub-threshold buckets + tags deleted at epoch close (limits retro attacks).
    - **Puncturable POPRF** (Brave's `ppoprf`): past epochs become
      cryptographically unqueryable even if keys later leak.
-   - Research option — **chaff reports**: clients occasionally (probability p)
-     submit a well-formed report for a random number from allocated ranges.
-     Chaff creates size-1 buckets, never crosses K (so the published DB is
-     unaffected), but makes sub-threshold bucket-size signals unreliable for
-     the attacker: "j=3 reports on X" might be one real report plus chaff.
-     Cost: a few extra tokens/requests per client per epoch. Evaluate in the
-     M3 pilot.
+   - **Chaff reports — evaluated 2026-08-29, deprioritized.** Simulated at a
+     5% client rate (495 chaff reports over a 10k-user epoch, `star_sim`):
+     the published DB stays unchanged and the sealed-bucket histogram is
+     heavily noised (302 → 797 buckets — decent *distributional* cover for
+     "how many distinct numbers got reported"), but a **targeted probe's
+     count is completely unblurred** (campaign bucket ×3 → ×3): uniform
+     chaff in a ~10¹⁰ space essentially never lands on any given number,
+     and directing enough chaff at every plausible target is infeasible by
+     volume. Conclusion: chaff cannot defend against targeted probes;
+     that defense rests entirely on token gating, the institutional split,
+     and epoch puncturing. Revisit chaff only if aggregate-shape leakage
+     becomes a concern.
 2. **Equality leakage below threshold:** server sees that *some* tag has j < K
    reports (not its value). Acceptable; disclose in docs.
 3. **Poisoning / Sybil:** attacker needs K colluding "installs" to force a
@@ -356,7 +361,7 @@ against).
    reports/week is human-scale.
 3. **M3 pilot:** at ≈ 2.5–5k active users in a launch country, run M3 in
    shadow mode with K=5 (collect via both M1 and M3; compare outputs; measure
-   real `r`; evaluate chaff).
+   real `r`).
 4. **M3 primary / M1 retired:** when M3 shadow output ⊇ M1 output for
    consecutive epochs; raise K per §7.2 as U grows.
 
@@ -383,3 +388,8 @@ against).
   feature bit-rotted upstream). Perf, threshold behavior, probe leakage, and
   puncturing all confirmed; see §5.7. Partner brief for the randomness-server
   operator: [partner-brief.md](partner-brief.md).
+- 2026-08-29 — Chaff evaluated in simulation and **deprioritized**: provides
+  distributional cover only, does not blur targeted probes (§5.5.1).
+- 2026-08-29 — §5.9 client lifecycle implemented (`opencaller-core::lifecycle`);
+  offline DB engine implemented and benchmarked (`opencaller-core::db`,
+  10M entries: 77 MB, 133 ns miss / 1.5 µs hit, RAM-flat via mmap).
