@@ -3,12 +3,14 @@
 //! Everything performance- or privacy-critical lives here, behind
 //! UniFFI/JNI bindings on the app side and a CLI in CI:
 //!
+//! - [`db`]: the offline spam database — `OCDB` binary format with a Bloom
+//!   front-end and mmap'd delta-encoded blocks. Same code builds shards in
+//!   CI and reads them on-phone. Benchmark: `cargo run --release --bin db_bench`
 //! - [`star`]: the M3 collection leg — STAR threshold-encrypted spam
 //!   reporting (docs/collection-mechanisms.md §5). A report for a phone
 //!   number is only decryptable by the aggregation server once ≥ K distinct
 //!   clients reported the same number in the same epoch.
-//! - DB format / lookup engine: lands with the PRD M0 spike (next).
-//!
-//! Run the research simulation: `cargo run --release --bin star_sim`
+//!   Simulation: `cargo run --release --bin star_sim`
 
+pub mod db;
 pub mod star;

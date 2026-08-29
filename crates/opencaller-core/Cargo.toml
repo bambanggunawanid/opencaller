@@ -14,3 +14,4 @@ sta-rs = "0.3.3"
 # Puncturable partially-oblivious PRF — the randomness server for full STAR.
 ppoprf = "0.5.0"
 rand = "0.8"
+memmap2 = "0.9.11"
