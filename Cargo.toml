@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/opencaller-core"]
+members = ["crates/opencaller-core", "crates/opencaller-pipeline"]
 
 [workspace.package]
 edition = "2021"
