@@ -54,14 +54,25 @@ object DbManager {
   /** Hot path: called from the CallScreeningService while the call rings. */
   fun lookup(context: Context, number: String): SpamHit? {
     if (!ensureOpen(context)) return null
-    val raw = NativeCore.nativeLookup(handle, number) ?: return null
-    val parts = raw.split('|')
-    if (parts.size != 3) return null
-    return SpamHit(
-      category = parts[0],
-      reportCount = parts[1].toIntOrNull() ?: 0,
-      lastSeenDays = parts[2].toIntOrNull() ?: 0,
-    )
+    // The DB stores full NANP (leading country code 1). Carriers may deliver
+    // 10-digit national format, so fall back to the E.164 candidate.
+    // M0 shim for the US shard; per-country normalization comes with F3.
+    val digits = number.filter { it.isDigit() }
+    val candidates = buildList {
+      add(number)
+      if (digits.length == 10) add("1$digits")
+    }
+    for (candidate in candidates) {
+      val raw = NativeCore.nativeLookup(handle, candidate) ?: continue
+      val parts = raw.split('|')
+      if (parts.size != 3) continue
+      return SpamHit(
+        category = parts[0],
+        reportCount = parts[1].toIntOrNull() ?: 0,
+        lastSeenDays = parts[2].toIntOrNull() ?: 0,
+      )
+    }
+    return null
   }
 
   /** Append to the app's own history file (not the system call log). */
