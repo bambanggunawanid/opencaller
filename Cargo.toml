@@ -1,0 +1,12 @@
+[workspace]
+resolver = "2"
+members = ["crates/opencaller-core"]
+
+[workspace.package]
+edition = "2021"
+license = "GPL-3.0-or-later"
+repository = "https://github.com/TBD/opencaller"
+
+[profile.release]
+lto = "thin"
+codegen-units = 1

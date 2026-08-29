@@ -1,0 +1,16 @@
+[package]
+name = "opencaller-core"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "OpenCaller shared core: offline spam DB engine + STAR threshold-encrypted collection"
+
+[dependencies]
+# STAR message layer (STARLite mechanics: shares, tags, ciphertexts).
+# NOTE: the crate's own `star2` feature is broken against ppoprf 0.5 on
+# crates.io, so we integrate ppoprf directly ourselves (star::RandomnessMode).
+sta-rs = "0.3.3"
+# Puncturable partially-oblivious PRF — the randomness server for full STAR.
+ppoprf = "0.5.0"
+rand = "0.8"
