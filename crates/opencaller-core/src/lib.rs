@@ -12,5 +12,10 @@
 //!   clients reported the same number in the same epoch.
 //!   Simulation: `cargo run --release --bin star_sim`
 
+//! - [`lifecycle`]: the §5.9 client report state machine (queue → token →
+//!   jitter → OPRF → relay → tombstone) — platform-agnostic; the native
+//!   shell drives it from its background scheduler.
+
 pub mod db;
+pub mod lifecycle;
 pub mod star;
