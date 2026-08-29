@@ -1,0 +1,49 @@
+# M1 (PRD §8): weekly cron building signed OCDB shards from public data.
+# The signing key lives ONLY in repo secrets (and offline backup) — the
+# same key whose public half is pinned in the app.
+name: build-shards
+
+on:
+  schedule:
+    - cron: "0 3 * * 1" # Mondays 03:00 UTC — matches the weekly epoch
+  workflow_dispatch:
+
+jobs:
+  us-shard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Fetch FTC DNC data (last 30 days)
+        run: scripts/fetch-ftc.sh data/ftc 30
+
+      - name: Build + sign shard
+        env:
+          SHARD_SIGNING_KEY: ${{ secrets.SHARD_SIGNING_KEY_BASE64 }}
+        run: |
+          echo "$SHARD_SIGNING_KEY" | base64 -d > /tmp/shard_signing.key
+          cargo run --release -p opencaller-pipeline -- build \
+            --country US \
+            --today "$(date -u +%F)" \
+            --max-age-days 180 \
+            --out us.ocdb \
+            --sign /tmp/shard_signing.key \
+            data/ftc/*.csv
+          rm /tmp/shard_signing.key
+
+      - name: Verify before publishing
+        run: |
+          cargo run --release -p opencaller-pipeline -- verify \
+            --pubkey android/app/src/main/assets/shard_signing.pub us.ocdb
+
+      - name: Upload shard artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: us-shard
+          path: |
+            us.ocdb
+            us.ocdb.sig
+            us.ocdb.manifest.json
+      # Publishing to GitHub Releases (the app's update URL) is enabled
+      # once the release channel is decided — PRD §11.

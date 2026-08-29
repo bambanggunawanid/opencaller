@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Note what is ABSENT: no INTERNET (M0 has no network path at all), no
+     READ_CONTACTS ever (PRD §5), no READ_CALL_LOG (screening role needs
+     none of it). The permission list IS the privacy policy. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+  <application
+    android:label="OpenCaller"
+    android:icon="@mipmap/ic_launcher"
+    android:allowBackup="false"
+    android:theme="@android:style/Theme.Material.Light.NoActionBar">
+
+    <activity
+      android:name=".MainActivity"
+      android:exported="true">
+      <intent-filter>
+        <action android:name="android.intent.action.MAIN" />
+        <category android:name="android.intent.category.LAUNCHER" />
+      </intent-filter>
+    </activity>
+
+    <service
+      android:name=".ScreeningService"
+      android:permission="android.permission.BIND_SCREENING_SERVICE"
+      android:exported="true">
+      <intent-filter>
+        <action android:name="android.telecom.CallScreeningService" />
+      </intent-filter>
+    </service>
+  </application>
+</manifest>

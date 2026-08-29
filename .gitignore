@@ -1,2 +1,11 @@
 /target
 *.ocdb
+# ...except the bundled demo shard (built from public FTC data)
+!android/app/src/main/assets/*.ocdb
+
+# Android
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+android/app/src/main/jniLibs/

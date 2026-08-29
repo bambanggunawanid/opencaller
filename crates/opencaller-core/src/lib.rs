@@ -16,6 +16,9 @@
 //!   jitter → OPRF → relay → tombstone) — platform-agnostic; the native
 //!   shell drives it from its background scheduler.
 
+//! - [`update`]: Ed25519 verification of downloaded shards (pinned pubkey).
+
 pub mod db;
 pub mod lifecycle;
 pub mod star;
+pub mod update;

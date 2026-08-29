@@ -303,8 +303,8 @@ wrong-listing appeals.
 
 | Milestone | Scope | Target |
 |---|---|---|
-| M0 — Validation spike | Kotlin `CallScreeningService` calling Rust core over UniFFI/JNI + DB format benchmark (10 M entries: size, lookup latency, RAM) | 2–3 wks |
-| M1 — Data pipeline | CI job producing signed shards for 2–3 launch countries | +3 wks |
+| M0 — Validation spike | Kotlin `CallScreeningService` calling Rust core over UniFFI/JNI + DB format benchmark (10 M entries: size, lookup latency, RAM) | ✅ done 2026-08-29 (JNI bridge, OCDB benchmark: 133 ns miss / 1.5 µs hit / 77 MB / RAM-flat) |
+| M1 — Data pipeline | CI job producing signed shards for 2–3 launch countries | ◐ US pipeline done (FTC DNC → signed shard, validated on real data); CI cron + more countries pending |
 | M2 — MVP alpha | F1–F8 integrated, internal testing | +6 wks |
 | M3 — Public beta | F-Droid + Play open beta, feedback loop, security review of update path | +4 wks |
 | M4 — 1.0 | Stable release, store listings, docs | +4 wks |

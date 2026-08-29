@@ -1,6 +1,10 @@
 [workspace]
 resolver = "2"
-members = ["crates/opencaller-core", "crates/opencaller-pipeline"]
+members = [
+  "crates/opencaller-core",
+  "crates/opencaller-pipeline",
+  "crates/opencaller-android",
+]
 
 [workspace.package]
 edition = "2021"
