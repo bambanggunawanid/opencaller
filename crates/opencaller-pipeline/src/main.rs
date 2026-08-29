@@ -216,6 +216,8 @@ fn cmd_build(
   }
 
   let mut builder = DbBuilder::new();
+  // Signed build date — the phone refuses shards whose date regresses.
+  builder.set_built_days(today_days.clamp(0, u16::MAX as i64) as u16);
   for (number, a) in &agg {
     builder.add(DbEntry {
       number: *number,

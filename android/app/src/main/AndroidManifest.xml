@@ -1,8 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Note what is ABSENT: no INTERNET (M0 has no network path at all), no
-     READ_CONTACTS ever (PRD §5), no READ_CALL_LOG (screening role needs
-     none of it). The permission list IS the privacy policy. -->
+<!-- The permission list IS the privacy policy (PRD §5): no READ_CONTACTS
+     ever, no READ_CALL_LOG (the screening role needs none of it). INTERNET
+     exists for exactly one code path — UpdateManager fetching the signed
+     DB shard, user-triggered/schedulable/disableable; call screening never
+     touches the network. -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+  <uses-permission android:name="android.permission.INTERNET" />
 
   <application
     android:label="OpenCaller"

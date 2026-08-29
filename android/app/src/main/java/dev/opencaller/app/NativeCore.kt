@@ -15,6 +15,20 @@ object NativeCore {
   external fun nativeOpen(path: String): Long
   external fun nativeLookup(handle: Long, number: String): String?
   external fun nativeEntryCount(handle: Long): Long
+  external fun nativeBuiltDays(handle: Long): Int
   external fun nativeClose(handle: Long)
   external fun nativeVerify(shardPath: String, sigPath: String, pubkeyPath: String): Boolean
+
+  /**
+   * Full update transaction (verify → validate → rollback check → atomic
+   * swap). Returns "ok|entries|builtDays" or "error|message". Close and
+   * reopen the handle afterwards.
+   */
+  external fun nativeApplyUpdate(
+    dir: String,
+    shardName: String,
+    newShard: ByteArray,
+    newSig: ByteArray,
+    pubkeyPath: String,
+  ): String
 }

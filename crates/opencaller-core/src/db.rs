@@ -14,7 +14,7 @@
 //! Layout (all little-endian):
 //! ```text
 //! [ 0..64   header: magic "OCDB0001", entry_count u64, bloom_bits u64,
-//!           bloom_hashes u32, block_count u32, reserved ]
+//!           bloom_hashes u32, block_count u32, built_days u16, reserved ]
 //! [ bloom   bit array, (bloom_bits+7)/8 bytes ]
 //! [ index   block_count × (first_number u64, block_offset u64) ]
 //! [ blocks  per entry: varint delta ++ category u8 ++
@@ -169,11 +169,18 @@ pub struct BuildStats {
 #[derive(Default)]
 pub struct DbBuilder {
   entries: Vec<DbEntry>,
+  built_days: u16,
 }
 
 impl DbBuilder {
   pub fn new() -> Self {
     Self::default()
+  }
+
+  /// Build date (days since epoch). Part of the signed header — the phone
+  /// refuses updates whose `built_days` regresses (rollback protection).
+  pub fn set_built_days(&mut self, days: u16) {
+    self.built_days = days;
   }
 
   pub fn add(&mut self, entry: DbEntry) {
@@ -229,6 +236,7 @@ impl DbBuilder {
     header[16..24].copy_from_slice(&bloom_bits.to_le_bytes());
     header[24..28].copy_from_slice(&BLOOM_HASHES.to_le_bytes());
     header[28..32].copy_from_slice(&(block_count as u32).to_le_bytes());
+    header[32..34].copy_from_slice(&self.built_days.to_le_bytes());
 
     let file = File::create(path)?;
     let mut w = BufWriter::new(file);
@@ -254,6 +262,7 @@ pub struct SpamDb {
   entry_count: u64,
   bloom_bits: u64,
   block_count: usize,
+  built_days: u16,
   bloom_off: usize,
   index_off: usize,
   blocks_off: usize,
@@ -277,6 +286,7 @@ impl SpamDb {
     let bloom_hashes = u32::from_le_bytes(mmap[24..28].try_into().unwrap());
     let block_count =
       u32::from_le_bytes(mmap[28..32].try_into().unwrap()) as usize;
+    let built_days = u16::from_le_bytes(mmap[32..34].try_into().unwrap());
     if bloom_hashes != BLOOM_HASHES {
       return Err(DbError::Format("unsupported bloom hash count"));
     }
@@ -290,11 +300,16 @@ impl SpamDb {
     if blocks_off > mmap.len() {
       return Err(DbError::Format("sections exceed file size"));
     }
-    Ok(Self { mmap, entry_count, bloom_bits, block_count, bloom_off, index_off, blocks_off })
+    Ok(Self { mmap, entry_count, bloom_bits, block_count, built_days, bloom_off, index_off, blocks_off })
   }
 
   pub fn len(&self) -> u64 {
     self.entry_count
+  }
+
+  /// Build date of this shard (days since epoch, signed with the file).
+  pub fn built_days(&self) -> u16 {
+    self.built_days
   }
 
   pub fn is_empty(&self) -> bool {

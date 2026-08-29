@@ -54,7 +54,51 @@ public final class Smoke {
     check(nsPerMiss < 1_000_000, "under 1 ms through JNI");
 
     NativeCore.nativeClose(handle);
+
+    // ---- Update transaction matrix (args[2] = dir prepared by the shell
+    // script: v1/v2/vOld shards + sigs + throwaway pubkey) ----
+    if (args.length > 2) updateScenario(args[2]);
+
     System.out.println("ALL PASSED");
+  }
+
+  private static byte[] read(String p) throws java.io.IOException {
+    return java.nio.file.Files.readAllBytes(java.nio.file.Path.of(p));
+  }
+
+  private static void updateScenario(String dir) {
+    try {
+      String pub = dir + "/shard_signing.pub";
+
+      // Fresh install of v1.
+      String r = NativeCore.nativeApplyUpdate(dir, "us.ocdb", read(dir + "/v1.ocdb"), read(dir + "/v1.ocdb.sig"), pub);
+      check(r.startsWith("ok|"), "update: fresh install applies (" + r + ")");
+      long h = NativeCore.nativeOpen(dir + "/us.ocdb");
+      int v1days = NativeCore.nativeBuiltDays(h);
+      NativeCore.nativeClose(h);
+
+      // Upgrade to v2 (newer built date).
+      r = NativeCore.nativeApplyUpdate(dir, "us.ocdb", read(dir + "/v2.ocdb"), read(dir + "/v2.ocdb.sig"), pub);
+      check(r.startsWith("ok|"), "update: upgrade applies (" + r + ")");
+      h = NativeCore.nativeOpen(dir + "/us.ocdb");
+      check(NativeCore.nativeBuiltDays(h) > v1days, "update: built_days advanced");
+      NativeCore.nativeClose(h);
+
+      // Replay of the older shard: valid signature, must be refused.
+      r = NativeCore.nativeApplyUpdate(dir, "us.ocdb", read(dir + "/vOld.ocdb"), read(dir + "/vOld.ocdb.sig"), pub);
+      check(r.startsWith("error|rollback"), "update: rollback refused (" + r + ")");
+
+      // Tampered bytes: refused, installed shard still opens.
+      byte[] evil = read(dir + "/v2.ocdb");
+      evil[40] ^= 0xFF;
+      r = NativeCore.nativeApplyUpdate(dir, "us.ocdb", evil, read(dir + "/v2.ocdb.sig"), pub);
+      check(r.startsWith("error|signature"), "update: tamper refused (" + r + ")");
+      h = NativeCore.nativeOpen(dir + "/us.ocdb");
+      check(h != 0 && NativeCore.nativeEntryCount(h) > 0, "update: installed shard intact after refusals");
+      NativeCore.nativeClose(h);
+    } catch (java.io.IOException e) {
+      check(false, "update scenario io: " + e.getMessage());
+    }
   }
 
   private Smoke() {}

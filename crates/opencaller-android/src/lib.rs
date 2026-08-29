@@ -13,12 +13,12 @@
 use std::fs;
 use std::path::Path;
 
-use jni::objects::{JClass, JString};
-use jni::sys::{jboolean, jlong, jstring, JNI_FALSE, JNI_TRUE};
+use jni::objects::{JByteArray, JClass, JString};
+use jni::sys::{jboolean, jint, jlong, jstring, JNI_FALSE, JNI_TRUE};
 use jni::JNIEnv;
 
 use opencaller_core::db::SpamDb;
-use opencaller_core::update::verify_shard;
+use opencaller_core::update::{apply_update, verify_shard};
 
 fn get_string(env: &mut JNIEnv, s: &JString) -> Option<String> {
   env.get_string(s).ok().map(|j| j.into())
@@ -98,6 +98,54 @@ pub extern "system" fn Java_dev_opencaller_app_NativeCore_nativeClose(
     // SAFETY: exactly-once contract owned by the Kotlin side.
     drop(unsafe { Box::from_raw(handle as *mut SpamDb) });
   }
+}
+
+#[no_mangle]
+pub extern "system" fn Java_dev_opencaller_app_NativeCore_nativeBuiltDays(
+  _env: JNIEnv,
+  _class: JClass,
+  handle: jlong,
+) -> jint {
+  if handle == 0 {
+    return 0;
+  }
+  let db = unsafe { &*(handle as *const SpamDb) };
+  db.built_days() as jint
+}
+
+/// Cold path: the complete update transaction (verify → validate →
+/// rollback check → atomic swap). Returns "ok|<entries>|<built_days>" on
+/// success, "error|<message>" otherwise. The caller must close and reopen
+/// its handle afterwards.
+#[no_mangle]
+pub extern "system" fn Java_dev_opencaller_app_NativeCore_nativeApplyUpdate(
+  mut env: JNIEnv,
+  _class: JClass,
+  dir: JString,
+  shard_name: JString,
+  new_shard: JByteArray,
+  new_sig: JByteArray,
+  pubkey_path: JString,
+) -> jstring {
+  let result = (|| -> Result<String, String> {
+    let dir = get_string(&mut env, &dir).ok_or("bad dir")?;
+    let name = get_string(&mut env, &shard_name).ok_or("bad name")?;
+    let shard = env.convert_byte_array(&new_shard).map_err(|e| e.to_string())?;
+    let sig = env.convert_byte_array(&new_sig).map_err(|e| e.to_string())?;
+    let pubkey_path = get_string(&mut env, &pubkey_path).ok_or("bad pubkey path")?;
+    let pubkey = fs::read(&pubkey_path).map_err(|e| e.to_string())?;
+    let applied = apply_update(Path::new(&dir), &name, &shard, &sig, &pubkey)
+      .map_err(|e| e.to_string())?;
+    Ok(format!("ok|{}|{}", applied.entries, applied.built_days))
+  })();
+  let out = match result {
+    Ok(s) => s,
+    Err(e) => format!("error|{e}"),
+  };
+  env
+    .new_string(out)
+    .map(|j| j.into_raw())
+    .unwrap_or(std::ptr::null_mut())
 }
 
 /// Cold path: verify a downloaded/bundled shard against the pinned pubkey

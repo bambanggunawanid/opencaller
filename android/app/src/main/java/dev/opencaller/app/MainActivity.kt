@@ -70,7 +70,8 @@ fun HomeScreen() {
         )
         Text(
           if (DbManager.verified)
-            "Database: ${DbManager.entryCount()} numbers, signature verified"
+            "Database: ${DbManager.entryCount()} numbers, signature verified, " +
+              "built ${java.time.LocalDate.ofEpochDay(DbManager.builtDays().toLong())}"
           else
             "Database: signature verification FAILED — lookups disabled",
           style = MaterialTheme.typography.bodyMedium,
@@ -97,6 +98,16 @@ fun HomeScreen() {
       else "$query: ${hit.category} — ${hit.reportCount} report(s)"
     }) { Text("Lookup") }
     result?.let { Text(it, style = MaterialTheme.typography.bodyLarge) }
+
+    var updateStatus by remember { mutableStateOf<String?>(null) }
+    Button(onClick = {
+      updateStatus = "Checking…"
+      Thread {
+        val msg = UpdateManager.checkAndApply(context)
+        (context as? ComponentActivity)?.runOnUiThread { updateStatus = msg }
+      }.start()
+    }) { Text("Check for database update") }
+    updateStatus?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
 
     Text("Recent screening events", style = MaterialTheme.typography.titleMedium)
     LazyColumn(verticalArrangement = Arrangement.spacedBy(4.dp)) {

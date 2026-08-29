@@ -16,9 +16,9 @@ data class ScreenEvent(val number: String, val verdict: String, val atMillis: Lo
  * refuses tampered databases; there is no unverified fallback).
  */
 object DbManager {
-  private const val SHARD = "us.ocdb"
-  private const val SIG = "us.ocdb.sig"
-  private const val PUBKEY = "shard_signing.pub"
+  const val SHARD = "us.ocdb"
+  const val SIG = "us.ocdb.sig"
+  const val PUBKEY = "shard_signing.pub"
   private const val HISTORY = "screening_history.log"
   private const val HISTORY_MAX_LINES = 200
 
@@ -30,26 +30,53 @@ object DbManager {
   fun ensureOpen(context: Context): Boolean {
     if (handle != 0L) return true
     val dir = context.filesDir
-    for (name in listOf(SHARD, SIG, PUBKEY)) {
-      val f = File(dir, name)
-      if (!f.exists()) {
-        context.assets.open(name).use { input ->
-          f.outputStream().use { input.copyTo(it) }
-        }
-      }
+    copyAssets(context, onlyMissing = true)
+    if (!verifyOnDisk(context)) {
+      // Self-heal: a crashed update or corrupted storage leaves files that
+      // fail verification. Restore the known-good bundled shard — the app
+      // never runs on unverified data and never stays broken.
+      copyAssets(context, onlyMissing = false)
+      if (!verifyOnDisk(context)) return false
     }
-    val shard = File(dir, SHARD)
-    verified = NativeCore.nativeVerify(
-      shard.absolutePath,
-      File(dir, SIG).absolutePath,
-      File(dir, PUBKEY).absolutePath,
-    )
-    if (!verified) return false
-    handle = NativeCore.nativeOpen(shard.absolutePath)
+    verified = true
+    handle = NativeCore.nativeOpen(File(dir, SHARD).absolutePath)
     return handle != 0L
   }
 
+  /** Close and reopen — called after a successful update swap. */
+  @Synchronized
+  fun reload(context: Context): Boolean {
+    if (handle != 0L) {
+      NativeCore.nativeClose(handle)
+      handle = 0
+      verified = false
+    }
+    return ensureOpen(context)
+  }
+
+  private fun copyAssets(context: Context, onlyMissing: Boolean) {
+    for (name in listOf(SHARD, SIG, PUBKEY)) {
+      val f = File(context.filesDir, name)
+      if (onlyMissing && f.exists()) continue
+      context.assets.open(name).use { input ->
+        f.outputStream().use { input.copyTo(it) }
+      }
+    }
+  }
+
+  private fun verifyOnDisk(context: Context): Boolean {
+    val dir = context.filesDir
+    return NativeCore.nativeVerify(
+      File(dir, SHARD).absolutePath,
+      File(dir, SIG).absolutePath,
+      File(dir, PUBKEY).absolutePath,
+    )
+  }
+
   fun entryCount(): Long = if (handle != 0L) NativeCore.nativeEntryCount(handle) else 0
+
+  /** Build date of the installed shard, as days since the Unix epoch. */
+  fun builtDays(): Int = if (handle != 0L) NativeCore.nativeBuiltDays(handle) else 0
 
   /** Hot path: called from the CallScreeningService while the call rings. */
   fun lookup(context: Context, number: String): SpamHit? {
