@@ -1,0 +1,1 @@
+• Hardening: capped update downloads, crash-proof DB reader on malformed shards, history-log sanitization
