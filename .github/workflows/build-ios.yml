@@ -36,6 +36,7 @@ jobs:
             -configuration Release -destination 'generic/platform=iOS' \
             CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \
             CODE_SIGN_IDENTITY="" \
+            VALIDATE_EMBEDDED_BINARIES=NO \
             SYMROOT="$PWD/build" build
 
       - name: Package IPA
