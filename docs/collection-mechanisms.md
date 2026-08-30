@@ -246,7 +246,7 @@ Implemented in `crates/opencaller-core/src/star.rs`; simulation in
 | Param | Trade-off | Straw-man |
 |---|---|---|
 | **K** (threshold) | ↑K: anonymity + poisoning bar ↑, detection latency + cold-start pain ↑ | 10 at pilot; revisit per-country |
-| **Epoch length** | ↓: fresher DB, more OPRF churn; ↑: bigger linkage window | 1 week (matches DB cadence) |
+| **Epoch length** | ↓: fresher DB, more OPRF churn; ↑: bigger linkage window | 1 week (matches DB cadence). **Rotation-heavy markets (e.g. Indonesia: near-free prepaid SIMs, spammers rotate numbers in days) need DAILY or shorter epochs + low K** — a rotating number must cross K and publish before it is discarded. The crypto is epoch-agnostic; this is purely the per-country signed config. Complementary defenses shipped 2026-08-30: OCDB v2 prefix entries (pipeline cluster detection condemns the SIM *batch*, which outlives its numbers) and fully-local behavioral learning (wangiri missed-call strikes on prefix blocks) — both work with zero reports. |
 | **aux payload** | every field revealed at threshold; keep minimal | category + country only |
 | **N shares kept per bucket** | robustness vs storage | all reports of epoch |
 | Rand-server operator | must be institutionally independent | seek partner (digital-rights org / university) |

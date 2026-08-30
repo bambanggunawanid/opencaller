@@ -38,14 +38,18 @@ class ScreeningService : CallScreeningService() {
       hit != null ->
         Prefs.action(this, hit.category) to "${hit.category}:${hit.reportCount}"
       else -> {
-        val suspicion = NativeCore.nativeHeuristic(
-          normalizeCandidate(number),
-          Prefs.ownNumber(this),
-        )
+        val candidate = normalizeCandidate(number)
+        val suspicion = NativeCore.nativeHeuristic(candidate, Prefs.ownNumber(this))
+        // "Expecting a call" pauses the unknown-hostile layers only —
+        // DB, rules, and structural heuristics still apply.
+        val paused = System.currentTimeMillis() < Prefs.pausedUntil(this)
         when {
           suspicion != null ->
             Prefs.action(this, Prefs.HEURISTIC) to "heuristic:$suspicion"
-          Prefs.silenceUnknown(this) -> Prefs.Action.SILENCE to "unknown-mode"
+          !paused && LocalLearn.isSuspicious(this, candidate.filter { it.isDigit() }) ->
+            Prefs.action(this, Prefs.HEURISTIC) to "heuristic:wangiri-prefix"
+          !paused && Prefs.silenceUnknown(this) ->
+            Prefs.Action.SILENCE to "unknown-mode"
           else -> Prefs.Action.ALLOW to null
         }
       }

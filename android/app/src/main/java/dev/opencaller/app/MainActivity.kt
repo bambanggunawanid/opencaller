@@ -541,16 +541,55 @@ fun HomeScreen() {
 
     item {
       var silenceUnknown by remember { mutableStateOf(Prefs.silenceUnknown(context)) }
-      Row(
-        Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-      ) {
-        Text("Silence all unknown numbers", style = MaterialTheme.typography.bodyLarge)
-        TextButton(onClick = {
-          silenceUnknown = !silenceUnknown
-          Prefs.setSilenceUnknown(context, silenceUnknown)
-        }) { Text(if (silenceUnknown) "ON" else "OFF") }
+      var wangiri by remember { mutableStateOf(Prefs.wangiriEnabled(context)) }
+      var pausedUntil by remember { mutableStateOf(Prefs.pausedUntil(context)) }
+      Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Row(
+          Modifier.fillMaxWidth(),
+          horizontalArrangement = Arrangement.SpaceBetween,
+          verticalAlignment = Alignment.CenterVertically,
+        ) {
+          Text("Silence all unknown numbers", style = MaterialTheme.typography.bodyLarge)
+          TextButton(onClick = {
+            silenceUnknown = !silenceUnknown
+            Prefs.setSilenceUnknown(context, silenceUnknown)
+          }) { Text(if (silenceUnknown) "ON" else "OFF") }
+        }
+        Row(
+          Modifier.fillMaxWidth(),
+          horizontalArrangement = Arrangement.SpaceBetween,
+          verticalAlignment = Alignment.CenterVertically,
+        ) {
+          Text("Learn from missed calls", style = MaterialTheme.typography.bodyLarge)
+          TextButton(onClick = {
+            wangiri = !wangiri
+            Prefs.setWangiriEnabled(context, wangiri)
+          }) { Text(if (wangiri) "ON" else "OFF") }
+        }
+        Text(
+          "Rotating spammers can't hide their SIM batch: when unknown " +
+            "numbers ring briefly and hang up, their whole number block is " +
+            "silenced locally for 48h (two strikes needed — one missed " +
+            "courier call is never enough). Learned on this phone only; " +
+            "needs notification access.",
+          style = MaterialTheme.typography.bodySmall,
+        )
+        val now = System.currentTimeMillis()
+        Button(onClick = {
+          pausedUntil = if (pausedUntil > now) 0L else now + 45 * 60 * 1000
+          Prefs.setPausedUntil(context, pausedUntil)
+        }) {
+          Text(
+            if (pausedUntil > now)
+              "Paused until ${java.text.SimpleDateFormat("HH:mm").format(pausedUntil)} — tap to resume"
+            else "Expecting a call — pause for 45 min",
+          )
+        }
+        Text(
+          "Pause lets unknown numbers ring normally (couriers, drivers). " +
+            "Database and rule verdicts stay active.",
+          style = MaterialTheme.typography.bodySmall,
+        )
       }
     }
 

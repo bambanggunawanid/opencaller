@@ -40,6 +40,10 @@ class CallNotificationListener : NotificationListenerService() {
     val callLabel = WATCHED_CALL_APPS[pkg]
     val isSmsApp = pkg == Telephony.Sms.getDefaultSmsPackage(this)
 
+    val isDialer =
+      pkg == getSystemService(android.telecom.TelecomManager::class.java)
+        ?.defaultDialerPackage
+
     when {
       (callLabel != null || isTest) &&
         notification.category == Notification.CATEGORY_CALL ->
@@ -47,7 +51,35 @@ class CallNotificationListener : NotificationListenerService() {
 
       (isSmsApp || isTest) && isMessageNotification(notification) ->
         handleSms(sbn, notification)
+
+      (isDialer || isTest) &&
+        notification.category == Notification.CATEGORY_MISSED_CALL ->
+        handleMissedCall(notification)
     }
+  }
+
+  /**
+   * Wangiri watch (LocalLearn): a missed-call notification whose number we
+   * screened as unknown SECONDS ago means an unknown caller rang briefly
+   * and hung up — the burner-SIM pattern. Ring duration is approximated by
+   * (missed-notification time − our screening-event time).
+   */
+  private fun handleMissedCall(notification: Notification) {
+    if (!Prefs.wangiriEnabled(this)) return
+    val title = titleOf(notification) ?: return
+    val digits = extractNumberDigits(notification, title)
+      ?: notification.extras?.getCharSequence(Notification.EXTRA_TEXT)
+        ?.toString()?.filter { it.isDigit() }?.takeIf { it.length >= 7 }
+      ?: return
+
+    val now = System.currentTimeMillis()
+    val screened = DbManager.recentEvents(this).firstOrNull { e ->
+      e.number.filter { it.isDigit() } == digits && now - e.atMillis <= MAX_RING_MS
+    } ?: return // not screened just now (or a saved contact) — ignore
+    if (!screened.verdict.startsWith("unknown")) return
+
+    val strikes = LocalLearn.strike(this, digits)
+    DbManager.logEvent(this, digits, "learned:wangiri-strike:$strikes")
   }
 
   private fun handleCall(notification: Notification, appLabel: String) {
@@ -194,5 +226,8 @@ class CallNotificationListener : NotificationListenerService() {
       "com.whatsapp" to "WhatsApp",
       "com.whatsapp.w4b" to "WhatsApp Business",
     )
+
+    /** Screen→missed gap treated as a short "bait" ring. */
+    const val MAX_RING_MS = 20_000L
   }
 }

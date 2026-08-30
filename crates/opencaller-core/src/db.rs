@@ -34,7 +34,36 @@ use memmap2::Mmap;
 use crate::star::Category;
 
 const MAGIC: &[u8; 8] = b"OCDB0001";
+/// v2 appends a prefix-entry section (spam blocks that survive number
+/// rotation — see PRD §13 / the Indonesia problem). v1 files stay valid;
+/// the builder emits v2 only when prefix entries exist.
+const MAGIC_V2: &[u8; 8] = b"OCDB0002";
 const HEADER_LEN: usize = 64;
+/// Prefix entry wire size: value u64 + len u8 + category u8 +
+/// report_count u16 + last_seen u16.
+const PREFIX_ENTRY_LEN: usize = 14;
+const POW10: [u64; 16] = [
+  1,
+  10,
+  100,
+  1_000,
+  10_000,
+  100_000,
+  1_000_000,
+  10_000_000,
+  100_000_000,
+  1_000_000_000,
+  10_000_000_000,
+  100_000_000_000,
+  1_000_000_000_000,
+  10_000_000_000_000,
+  100_000_000_000_000,
+  1_000_000_000_000_000,
+];
+
+fn ndigits(n: u64) -> u32 {
+  if n == 0 { 1 } else { n.ilog10() + 1 }
+}
 pub const ENTRIES_PER_BLOCK: usize = 256;
 /// ~9.6 bits/entry ⇒ ≈1% Bloom false-positive rate; k=7 hashes is optimal.
 const BLOOM_BITS_PER_ENTRY: f64 = 9.585;
@@ -54,6 +83,21 @@ pub struct DbEntry {
 /// Payload returned by lookups.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct DbEntryInfo {
+  pub category: Category,
+  pub report_count: u16,
+  pub last_seen_days: u16,
+}
+
+/// A spam *block*: any number starting with these digits matches. Emitted
+/// by the pipeline when many reported numbers cluster in one allocation
+/// block — the defense that survives spammers rotating fresh SIMs from
+/// the same batch.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct PrefixEntry {
+  /// The prefix digits as an integer (e.g. 62819062 for "62819062…").
+  pub value: u64,
+  /// How many digits `value` has (leading zeros cannot occur in E.164).
+  pub len: u8,
   pub category: Category,
   pub report_count: u16,
   pub last_seen_days: u16,
@@ -158,6 +202,7 @@ fn decode_varint(buf: &[u8], pos: &mut usize) -> Option<u64> {
 #[derive(Debug)]
 pub struct BuildStats {
   pub entries: usize,
+  pub prefix_entries: usize,
   pub file_bytes: u64,
   pub bloom_bytes: usize,
   pub index_bytes: usize,
@@ -169,6 +214,7 @@ pub struct BuildStats {
 #[derive(Default)]
 pub struct DbBuilder {
   entries: Vec<DbEntry>,
+  prefixes: Vec<PrefixEntry>,
   built_days: u16,
 }
 
@@ -185,6 +231,12 @@ impl DbBuilder {
 
   pub fn add(&mut self, entry: DbEntry) {
     self.entries.push(entry);
+  }
+
+  /// Adding any prefix entry switches the file to format v2 (older readers
+  /// reject v2 shards and keep their installed DB until the app updates).
+  pub fn add_prefix(&mut self, entry: PrefixEntry) {
+    self.prefixes.push(entry);
   }
 
   pub fn build_to(mut self, path: &Path) -> Result<BuildStats, DbError> {
@@ -230,13 +282,37 @@ impl DbBuilder {
       }
     }
 
+    // Prefix section (v2): sorted by (len, value); last-added wins on dup.
+    self.prefixes.sort_by_key(|p| (p.len, p.value));
+    let mut prefixes: Vec<PrefixEntry> = Vec::with_capacity(self.prefixes.len());
+    for p in self.prefixes.drain(..) {
+      match prefixes.last_mut() {
+        Some(last) if last.len == p.len && last.value == p.value => *last = p,
+        _ => prefixes.push(p),
+      }
+    }
+    let mut prefix_bytes: Vec<u8> = Vec::with_capacity(prefixes.len() * PREFIX_ENTRY_LEN);
+    for p in &prefixes {
+      prefix_bytes.extend_from_slice(&p.value.to_le_bytes());
+      prefix_bytes.push(p.len);
+      prefix_bytes.push(p.category as u8);
+      prefix_bytes.extend_from_slice(&p.report_count.to_le_bytes());
+      prefix_bytes.extend_from_slice(&p.last_seen_days.to_le_bytes());
+    }
+    let v2 = !prefixes.is_empty();
+    let prefix_off = (HEADER_LEN + bloom.len() + index.len() + blocks.len()) as u64;
+
     let mut header = [0u8; HEADER_LEN];
-    header[0..8].copy_from_slice(MAGIC);
+    header[0..8].copy_from_slice(if v2 { MAGIC_V2 } else { MAGIC });
     header[8..16].copy_from_slice(&(n as u64).to_le_bytes());
     header[16..24].copy_from_slice(&bloom_bits.to_le_bytes());
     header[24..28].copy_from_slice(&BLOOM_HASHES.to_le_bytes());
     header[28..32].copy_from_slice(&(block_count as u32).to_le_bytes());
     header[32..34].copy_from_slice(&self.built_days.to_le_bytes());
+    if v2 {
+      header[34..38].copy_from_slice(&(prefixes.len() as u32).to_le_bytes());
+      header[38..46].copy_from_slice(&prefix_off.to_le_bytes());
+    }
 
     let file = File::create(path)?;
     let mut w = BufWriter::new(file);
@@ -244,11 +320,14 @@ impl DbBuilder {
     w.write_all(&bloom)?;
     w.write_all(&index)?;
     w.write_all(&blocks)?;
+    w.write_all(&prefix_bytes)?;
     w.flush()?;
 
     Ok(BuildStats {
       entries: n,
-      file_bytes: (HEADER_LEN + bloom.len() + index.len() + blocks.len()) as u64,
+      prefix_entries: prefixes.len(),
+      file_bytes: (HEADER_LEN + bloom.len() + index.len() + blocks.len() + prefix_bytes.len())
+        as u64,
       bloom_bytes: bloom.len(),
       index_bytes: index.len(),
       blocks_bytes: blocks.len(),
@@ -266,6 +345,13 @@ pub struct SpamDb {
   bloom_off: usize,
   index_off: usize,
   blocks_off: usize,
+  /// End of the blocks section (start of the v2 prefix section, or EOF).
+  blocks_end: usize,
+  prefix_off: usize,
+  prefix_count: usize,
+  /// (prefix_len, first_index, one_past_last_index) per distinct length,
+  /// ascending — iterated in reverse for longest-prefix-first matching.
+  prefix_groups: Vec<(u8, usize, usize)>,
 }
 
 impl SpamDb {
@@ -278,9 +364,11 @@ impl SpamDb {
     if mmap.len() < HEADER_LEN {
       return Err(DbError::Format("file shorter than header"));
     }
-    if &mmap[0..8] != MAGIC {
-      return Err(DbError::Format("bad magic"));
-    }
+    let v2 = match &mmap[0..8] {
+      m if m == MAGIC => false,
+      m if m == MAGIC_V2 => true,
+      _ => return Err(DbError::Format("bad magic")),
+    };
     let entry_count = u64::from_le_bytes(mmap[8..16].try_into().unwrap());
     let bloom_bits = u64::from_le_bytes(mmap[16..24].try_into().unwrap());
     let bloom_hashes = u32::from_le_bytes(mmap[24..28].try_into().unwrap());
@@ -300,7 +388,55 @@ impl SpamDb {
     if blocks_off > mmap.len() {
       return Err(DbError::Format("sections exceed file size"));
     }
-    Ok(Self { mmap, entry_count, bloom_bits, block_count, built_days, bloom_off, index_off, blocks_off })
+
+    let (prefix_count, prefix_off) = if v2 {
+      let count = u32::from_le_bytes(mmap[34..38].try_into().unwrap()) as usize;
+      let off = u64::from_le_bytes(mmap[38..46].try_into().unwrap()) as usize;
+      if off < blocks_off || off.checked_add(count * PREFIX_ENTRY_LEN) != Some(mmap.len()) {
+        return Err(DbError::Format("bad prefix section"));
+      }
+      (count, off)
+    } else {
+      (0, mmap.len())
+    };
+    let blocks_end = prefix_off;
+
+    let mut db = Self {
+      mmap,
+      entry_count,
+      bloom_bits,
+      block_count,
+      built_days,
+      bloom_off,
+      index_off,
+      blocks_off,
+      blocks_end,
+      prefix_off,
+      prefix_count,
+      prefix_groups: Vec::new(),
+    };
+    // Group prefix entries by length once at open (entries are sorted by
+    // (len, value); reject disorder so lookups can binary-search safely).
+    let mut groups: Vec<(u8, usize, usize)> = Vec::new();
+    let mut prev: Option<(u8, u64)> = None;
+    for i in 0..db.prefix_count {
+      let (value, len, ..) = db.prefix_entry(i);
+      if len == 0 || len as usize >= POW10.len() {
+        return Err(DbError::Format("bad prefix length"));
+      }
+      if let Some((pl, pv)) = prev {
+        if (len, value) <= (pl, pv) {
+          return Err(DbError::Format("prefix section not sorted"));
+        }
+      }
+      prev = Some((len, value));
+      match groups.last_mut() {
+        Some(g) if g.0 == len => g.2 = i + 1,
+        _ => groups.push((len, i, i + 1)),
+      }
+    }
+    db.prefix_groups = groups;
+    Ok(db)
   }
 
   pub fn len(&self) -> u64 {
@@ -343,7 +479,13 @@ impl SpamDb {
     self.lookup(parse_number(number)?)
   }
 
+  /// Exact match first; on miss, longest matching prefix entry (spam
+  /// blocks that survive number rotation).
   pub fn lookup(&self, number: u64) -> Option<DbEntryInfo> {
+    self.lookup_exact(number).or_else(|| self.lookup_prefix(number))
+  }
+
+  fn lookup_exact(&self, number: u64) -> Option<DbEntryInfo> {
     if !self.bloom_contains(number) {
       return None;
     }
@@ -367,11 +509,11 @@ impl SpamDb {
     let block_end = if block_idx + 1 < self.block_count {
       self.blocks_off + self.index_entry(block_idx + 1).1 as usize
     } else {
-      self.mmap.len()
+      self.blocks_end
     };
     // Offsets come from the file; a malformed (pipeline-bug) shard must
     // degrade to a miss on the screening hot path, never a panic.
-    if block_start > block_end || block_end > self.mmap.len() {
+    if block_start > block_end || block_end > self.blocks_end {
       return None;
     }
     let block = &self.mmap[block_start..block_end];
@@ -402,6 +544,47 @@ impl SpamDb {
     None
   }
 
+  #[inline]
+  fn prefix_entry(&self, i: usize) -> (u64, u8, u8, u16, u16) {
+    let off = self.prefix_off + i * PREFIX_ENTRY_LEN;
+    let value = u64::from_le_bytes(self.mmap[off..off + 8].try_into().unwrap());
+    let len = self.mmap[off + 8];
+    let category = self.mmap[off + 9];
+    let count = u16::from_le_bytes([self.mmap[off + 10], self.mmap[off + 11]]);
+    let last_seen = u16::from_le_bytes([self.mmap[off + 12], self.mmap[off + 13]]);
+    (value, len, category, count, last_seen)
+  }
+
+  fn lookup_prefix(&self, number: u64) -> Option<DbEntryInfo> {
+    if self.prefix_count == 0 {
+      return None;
+    }
+    let nd = ndigits(number);
+    for &(len, start, end) in self.prefix_groups.iter().rev() {
+      if u32::from(len) >= nd {
+        continue; // prefix must be strictly shorter than the number
+      }
+      let target = number / POW10[(nd - u32::from(len)) as usize];
+      let (mut lo, mut hi) = (start, end);
+      while lo < hi {
+        let mid = (lo + hi) / 2;
+        let (value, _, category, count, last_seen) = self.prefix_entry(mid);
+        match value.cmp(&target) {
+          std::cmp::Ordering::Less => lo = mid + 1,
+          std::cmp::Ordering::Greater => hi = mid,
+          std::cmp::Ordering::Equal => {
+            return Some(DbEntryInfo {
+              category: Category::from_u8(category)?,
+              report_count: count,
+              last_seen_days: last_seen,
+            });
+          }
+        }
+      }
+    }
+    None
+  }
+
   /// Decode every entry (CI verification / debugging; not a phone path).
   pub fn iter_all(&self) -> HashMap<u64, DbEntryInfo> {
     let mut out = HashMap::with_capacity(self.entry_count as usize);
@@ -411,9 +594,9 @@ impl SpamDb {
       let end = if b + 1 < self.block_count {
         self.blocks_off + self.index_entry(b + 1).1 as usize
       } else {
-        self.mmap.len()
+        self.blocks_end
       };
-      if start > end || end > self.mmap.len() {
+      if start > end || end > self.blocks_end {
         continue;
       }
       let block = &self.mmap[start..end];
@@ -509,6 +692,44 @@ mod tests {
     // Full decode matches input.
     let all = db.iter_all();
     assert_eq!(all.len(), 601);
+  }
+
+  #[test]
+  fn prefix_entries_v2() {
+    let path = tempdir::TempPath::new("ocdb-prefix");
+    let mut b = DbBuilder::new();
+    b.add(entry(628190624000, Category::Scam, 5)); // exact entry inside the block
+    // Spam block 62819062xxxx (len 8) and a longer, more specific block.
+    b.add_prefix(PrefixEntry {
+      value: 62_819_062,
+      len: 8,
+      category: Category::Robocall,
+      report_count: 120,
+      last_seen_days: 20_700,
+    });
+    b.add_prefix(PrefixEntry {
+      value: 6_281_906_299,
+      len: 10,
+      category: Category::Scam,
+      report_count: 44,
+      last_seen_days: 20_701,
+    });
+    let stats = b.build_to(&path.0).unwrap();
+    assert_eq!(stats.prefix_entries, 2);
+
+    let db = SpamDb::open(&path.0).unwrap();
+    // Exact entry wins over its covering prefix.
+    assert_eq!(db.lookup(628190624000).unwrap().report_count, 5);
+    // Fresh, never-reported number in the block -> prefix match.
+    let hit = db.lookup(628190627777).unwrap();
+    assert_eq!(hit.category, Category::Robocall);
+    assert_eq!(hit.report_count, 120);
+    // Longest prefix wins.
+    assert_eq!(db.lookup(628190629911).unwrap().category, Category::Scam);
+    // Outside the block: still a miss.
+    assert!(db.lookup(628190630000).is_none());
+    // Prefix must be strictly shorter than the number.
+    assert!(db.lookup(62_819_062).is_none());
   }
 
   #[test]

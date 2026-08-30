@@ -135,6 +135,25 @@ object Prefs {
     prefs(context).edit().putBoolean("silence_unknown", on).apply()
   }
 
+  /**
+   * "Expecting a call": pauses silence-unknown and local-learning verdicts
+   * until this time — for the courier/driver moments where unknown numbers
+   * are wanted. DB and rule verdicts are never paused.
+   */
+  fun pausedUntil(context: Context): Long = prefs(context).getLong("pause_until", 0)
+
+  fun setPausedUntil(context: Context, untilMillis: Long) {
+    prefs(context).edit().putLong("pause_until", untilMillis).apply()
+  }
+
+  /** Local behavioral learning from missed-call patterns (wangiri watch). */
+  fun wangiriEnabled(context: Context): Boolean =
+    prefs(context).getBoolean("wangiri_learn", true)
+
+  fun setWangiriEnabled(context: Context, on: Boolean) {
+    prefs(context).edit().putBoolean("wangiri_learn", on).apply()
+  }
+
   fun updateMode(context: Context): UpdateMode {
     val raw = prefs(context).getString("update_mode", null)
       ?: return UpdateMode.WIFI_ONLY

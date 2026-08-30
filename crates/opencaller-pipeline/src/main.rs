@@ -31,7 +31,7 @@ use std::process::ExitCode;
 use ed25519_dalek::{Signature, Signer, SigningKey, Verifier, VerifyingKey};
 use sha2::{Digest, Sha256};
 
-use opencaller_core::db::{DbBuilder, DbEntry, SpamDb};
+use opencaller_core::db::{DbBuilder, DbEntry, PrefixEntry, SpamDb};
 use opencaller_core::star::Category;
 
 // ---------------------------------------------------------------- dates --
@@ -225,6 +225,40 @@ fn ingest_csvs(
   Ok((agg, stats))
 }
 
+struct ClusterBlock {
+  distinct: usize,
+  reports: u64,
+  latest_days: i64,
+  category: Category,
+}
+
+/// Group aggregated numbers into thousand-number blocks (prefix = number
+/// with the last 3 digits dropped) and return blocks with at least
+/// `threshold` DISTINCT reported numbers. The threshold is per distinct
+/// number, not per report — one prolific spammer must not condemn a block.
+fn cluster_blocks(
+  agg: &HashMap<u64, NumberAgg>,
+  threshold: usize,
+) -> Vec<(u64, ClusterBlock)> {
+  let mut blocks: HashMap<u64, (usize, u64, i64, HashMap<Category, u32>)> = HashMap::new();
+  for (number, a) in agg {
+    let b = blocks.entry(number / 1000).or_default();
+    b.0 += 1;
+    b.1 += a.count;
+    b.2 = b.2.max(a.latest_days);
+    for (cat, votes) in &a.votes {
+      *b.3.entry(*cat).or_default() += votes;
+    }
+  }
+  blocks
+    .into_iter()
+    .filter(|(_, b)| b.0 >= threshold)
+    .map(|(prefix, (distinct, reports, latest_days, votes))| {
+      (prefix, ClusterBlock { distinct, reports, latest_days, category: majority_category(&votes) })
+    })
+    .collect()
+}
+
 fn majority_category(votes: &HashMap<Category, u32>) -> Category {
   // Highest vote count; ties break toward the more severe category
   // (Scam=0 < Robocall=1 < ... — lower discriminant = more severe).
@@ -255,6 +289,7 @@ fn cmd_build(
   country: &str,
   today: &str,
   max_age_days: i64,
+  cluster_threshold: usize,
   sign_key: Option<&Path>,
 ) -> Result<(), String> {
   let today_days =
@@ -277,6 +312,21 @@ fn cmd_build(
       last_seen_days: a.latest_days.clamp(0, u16::MAX as i64) as u16,
     });
   }
+
+  // Cluster detection: spammers buy SIMs in batches, so reported numbers
+  // pile up inside thousand-number allocation blocks. Enough distinct
+  // numbers in one block ⇒ emit a prefix entry that also catches the
+  // block's not-yet-used numbers — the defense against rotation.
+  for (prefix, block) in cluster_blocks(&agg, cluster_threshold) {
+    builder.add_prefix(PrefixEntry {
+      value: prefix,
+      len: prefix.to_string().len() as u8,
+      category: block.category,
+      report_count: block.reports.min(u16::MAX as u64) as u16,
+      last_seen_days: block.latest_days.clamp(0, u16::MAX as i64) as u16,
+    });
+    let _ = block.distinct;
+  }
   let build = builder.build_to(out).map_err(|e| e.to_string())?;
 
   let shard_bytes = fs::read(out).map_err(|e| e.to_string())?;
@@ -297,17 +347,19 @@ fn cmd_build(
 
   // Tiny hand-rolled manifest (all values are simple; no JSON dep needed).
   let manifest = format!(
-    "{{\n  \"format\": \"OCDB0001\",\n  \"country\": \"{country}\",\n  \"built\": \"{today}\",\n  \"entries\": {},\n  \"source_rows\": {},\n  \"skipped_bad_number\": {},\n  \"skipped_bad_date\": {},\n  \"skipped_non_call\": {},\n  \"aged_out\": {},\n  \"max_age_days\": {max_age_days},\n  \"sha256\": \"{sha256}\",\n  \"signed\": {signed}\n}}\n",
-    build.entries, stats.rows, stats.skipped_bad_number, stats.skipped_bad_date,
-    stats.skipped_non_call, stats.aged_out,
+    "{{\n  \"format\": \"{}\",\n  \"country\": \"{country}\",\n  \"built\": \"{today}\",\n  \"entries\": {},\n  \"prefix_entries\": {},\n  \"source_rows\": {},\n  \"skipped_bad_number\": {},\n  \"skipped_bad_date\": {},\n  \"skipped_non_call\": {},\n  \"aged_out\": {},\n  \"max_age_days\": {max_age_days},\n  \"cluster_threshold\": {cluster_threshold},\n  \"sha256\": \"{sha256}\",\n  \"signed\": {signed}\n}}\n",
+    if build.prefix_entries > 0 { "OCDB0002" } else { "OCDB0001" },
+    build.entries, build.prefix_entries, stats.rows, stats.skipped_bad_number,
+    stats.skipped_bad_date, stats.skipped_non_call, stats.aged_out,
   );
   fs::write(format!("{}.manifest.json", out.display()), &manifest)
     .map_err(|e| e.to_string())?;
 
   println!(
-    "built {} — {} entries from {} rows ({} bad numbers, {} bad dates, {} aged out), {:.1} KB{}",
+    "built {} — {} entries + {} prefix blocks from {} rows ({} bad numbers, {} bad dates, {} aged out), {:.1} KB{}",
     out.display(),
     build.entries,
+    build.prefix_entries,
     stats.rows,
     stats.skipped_bad_number,
     stats.skipped_bad_date,
@@ -394,6 +446,7 @@ fn run() -> Result<(), String> {
         &flag("country").unwrap_or_else(|| "US".into()),
         &flag("today").ok_or("build needs --today YYYY-MM-DD (deterministic CI)")?,
         flag("max-age-days").map(|v| v.parse().unwrap_or(180)).unwrap_or(180),
+        flag("cluster-threshold").map(|v| v.parse().unwrap_or(25)).unwrap_or(25),
         flag("sign").map(PathBuf::from).as_deref(),
       )
     }
@@ -510,6 +563,7 @@ mod tests {
       "US",
       "2026-08-29",
       180,
+      25,
       Some(&dir.join("shard_signing.key")),
     )
     .unwrap();

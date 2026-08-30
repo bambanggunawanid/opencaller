@@ -1,0 +1,1 @@
+• Rotation-resistant defenses: spam-block prefix matching (DB v2), on-device wangiri learning from missed calls, "Expecting a call" pause for silence-unknown mode
