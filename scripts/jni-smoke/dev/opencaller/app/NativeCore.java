@@ -9,6 +9,7 @@ package dev.opencaller.app;
 public final class NativeCore {
   public static native long nativeOpen(String path);
   public static native String nativeLookup(long handle, String number);
+  public static native String nativeHeuristic(String number, String ownNumber);
   public static native long nativeEntryCount(long handle);
   public static native int nativeBuiltDays(long handle);
   public static native void nativeClose(long handle);

@@ -17,8 +17,11 @@
 //!   shell drives it from its background scheduler.
 
 //! - [`update`]: Ed25519 verification of downloaded shards (pinned pubkey).
+//! - [`heuristics`]: F7 data-free call checks (spoofing, invalid numbers) —
+//!   the screening fallback when the DB misses; works in every country.
 
 pub mod db;
+pub mod heuristics;
 pub mod lifecycle;
 pub mod star;
 pub mod update;

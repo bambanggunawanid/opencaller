@@ -55,6 +55,16 @@ public final class Smoke {
 
     NativeCore.nativeClose(handle);
 
+    // ---- F7 heuristics (stateless, no handle) ----
+    check("own-number-spoof".equals(NativeCore.nativeHeuristic("18283003919", "+1 828 300 3919")),
+        "heuristic: own-number spoof detected");
+    check("neighbor-spoof".equals(NativeCore.nativeHeuristic("18283001234", "18283003919")),
+        "heuristic: neighbor spoof detected");
+    check("invalid-number".equals(NativeCore.nativeHeuristic("+1 911 123 4567", "")),
+        "heuristic: invalid NANP detected");
+    check(NativeCore.nativeHeuristic("18283003919", "") == null,
+        "heuristic: clean number passes");
+
     // ---- Update transaction matrix (args[2] = dir prepared by the shell
     // script: v1/v2/vOld shards + sigs + throwaway pubkey) ----
     if (args.length > 2) updateScenario(args[2]);

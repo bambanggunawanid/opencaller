@@ -18,6 +18,7 @@ use jni::sys::{jboolean, jint, jlong, jstring, JNI_FALSE, JNI_TRUE};
 use jni::JNIEnv;
 
 use opencaller_core::db::SpamDb;
+use opencaller_core::heuristics;
 use opencaller_core::update::{apply_update, verify_shard};
 
 fn get_string(env: &mut JNIEnv, s: &JString) -> Option<String> {
@@ -97,6 +98,30 @@ pub extern "system" fn Java_dev_opencaller_app_NativeCore_nativeClose(
   if handle != 0 {
     // SAFETY: exactly-once contract owned by the Kotlin side.
     drop(unsafe { Box::from_raw(handle as *mut SpamDb) });
+  }
+}
+
+/// Hot path fallback (F7): data-free heuristics when the DB misses.
+/// `own_number` may be empty (feature off). Returns the suspicion label
+/// ("own-number-spoof", "neighbor-spoof", "invalid-number", "too-short")
+/// or null for a clean number. Stateless — no handle required.
+#[no_mangle]
+pub extern "system" fn Java_dev_opencaller_app_NativeCore_nativeHeuristic(
+  mut env: JNIEnv,
+  _class: JClass,
+  number: JString,
+  own_number: JString,
+) -> jstring {
+  let Some(number) = get_string(&mut env, &number) else {
+    return std::ptr::null_mut();
+  };
+  let own = get_string(&mut env, &own_number).filter(|s| !s.is_empty());
+  match heuristics::evaluate(&number, own.as_deref()) {
+    Some(s) => env
+      .new_string(s.label())
+      .map(|j| j.into_raw())
+      .unwrap_or(std::ptr::null_mut()),
+    None => std::ptr::null_mut(),
   }
 }
 
