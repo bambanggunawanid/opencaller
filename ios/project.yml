@@ -1,0 +1,103 @@
+# XcodeGen spec — CI (and any Mac) runs `xcodegen generate` to produce
+# OpenCaller.xcodeproj. The checked-in truth is this file, not a pbxproj.
+#
+# Prerequisites before generating (scripts/build-ios-rust.sh + CI do this):
+#   ios/rust/lib/libopencaller_ios.a   — Rust core for aarch64-apple-ios
+#   ios/OpenCaller/Resources/          — seed shard + sig + pinned pubkey
+name: OpenCaller
+options:
+  bundleIdPrefix: dev.opencaller
+  deploymentTarget:
+    iOS: "15.0"
+  developmentLanguage: en
+
+settings:
+  base:
+    SWIFT_VERSION: "5.9"
+    TARGETED_DEVICE_FAMILY: "1"
+    SWIFT_OBJC_BRIDGING_HEADER: "$(SRCROOT)/OpenCallerCore/opencaller.h"
+    LIBRARY_SEARCH_PATHS: "$(SRCROOT)/rust/lib"
+    OTHER_LDFLAGS: "-lopencaller_ios"
+
+targets:
+  OpenCaller:
+    type: application
+    platform: iOS
+    sources:
+      - path: OpenCaller
+        excludes: ["Resources"]
+      - path: OpenCallerCore
+      - path: OpenCaller/Resources
+        type: folder
+        buildPhase: resources
+        optional: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: dev.opencaller.app
+        MARKETING_VERSION: "0.7.0"
+        CURRENT_PROJECT_VERSION: "1"
+    info:
+      path: OpenCaller/Info.plist
+      properties:
+        CFBundleDisplayName: OpenCaller
+        CFBundleLocalizations: [en, id]
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
+        ITSAppUsesNonExemptEncryption: false
+    entitlements:
+      path: OpenCaller/OpenCaller.entitlements
+      properties:
+        com.apple.security.application-groups: [group.dev.opencaller.app]
+    dependencies:
+      - target: CallDirectoryExtension
+        embed: true
+      - target: MessageFilterExtension
+        embed: true
+
+  CallDirectoryExtension:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: CallDirectoryExtension
+      - path: OpenCallerCore
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: dev.opencaller.app.calldirectory
+        MARKETING_VERSION: "0.7.0"
+        CURRENT_PROJECT_VERSION: "1"
+    info:
+      path: CallDirectoryExtension/Info.plist
+      properties:
+        CFBundleDisplayName: OpenCaller
+        CFBundleLocalizations: [en, id]
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.CallKit.call-directory
+          NSExtensionPrincipalClass: "$(PRODUCT_MODULE_NAME).CallDirectoryHandler"
+    entitlements:
+      path: CallDirectoryExtension/CallDirectoryExtension.entitlements
+      properties:
+        com.apple.security.application-groups: [group.dev.opencaller.app]
+
+  MessageFilterExtension:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: MessageFilterExtension
+      - path: OpenCallerCore
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: dev.opencaller.app.messagefilter
+        MARKETING_VERSION: "0.7.0"
+        CURRENT_PROJECT_VERSION: "1"
+    info:
+      path: MessageFilterExtension/Info.plist
+      properties:
+        CFBundleDisplayName: OpenCaller SMS filter
+        CFBundleLocalizations: [en, id]
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.identitylookup.message-filter
+          NSExtensionPrincipalClass: "$(PRODUCT_MODULE_NAME).MessageFilterHandler"
+    entitlements:
+      path: MessageFilterExtension/MessageFilterExtension.entitlements
+      properties:
+        com.apple.security.application-groups: [group.dev.opencaller.app]

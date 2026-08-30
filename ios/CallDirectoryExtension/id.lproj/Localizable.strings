@@ -1,0 +1,9 @@
+/* Caller-ID labels, Bahasa Indonesia. */
+"Scam" = "Penipuan";
+"Robocall" = "Robocall";
+"Telemarketing" = "Telemarketing";
+"Debt collection" = "Penagihan utang";
+"Survey" = "Survei";
+"Reported spam" = "Spam terlapor";
+"SMS spam" = "Spam SMS";
+"reports" = "laporan";

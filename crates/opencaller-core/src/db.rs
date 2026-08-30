@@ -585,6 +585,28 @@ impl SpamDb {
     None
   }
 
+  /// Stream every entry in ascending number order with O(block) memory.
+  /// This is the iOS CallKit path: `CXCallDirectory` demands numbers in
+  /// ascending order and the extension runs under a tight memory budget,
+  /// so no collection is ever materialized.
+  pub fn iter_entries(&self) -> EntryIter<'_> {
+    EntryIter { db: self, block_idx: 0, block: &[], pos: 0, current: 0 }
+  }
+
+  /// Stream the v2 prefix (spam-block) entries, sorted by (len, value).
+  pub fn prefix_entries(&self) -> impl Iterator<Item = PrefixEntry> + '_ {
+    (0..self.prefix_count).filter_map(|i| {
+      let (value, len, category, count, last_seen) = self.prefix_entry(i);
+      Some(PrefixEntry {
+        value,
+        len,
+        category: Category::from_u8(category)?,
+        report_count: count,
+        last_seen_days: last_seen,
+      })
+    })
+  }
+
   /// Decode every entry (CI verification / debugging; not a phone path).
   pub fn iter_all(&self) -> HashMap<u64, DbEntryInfo> {
     let mut out = HashMap::with_capacity(self.entry_count as usize);
@@ -625,6 +647,75 @@ impl SpamDb {
   }
 }
 
+/// Streaming ascending-order entry iterator (see [`SpamDb::iter_entries`]).
+/// Malformed blocks are skipped, mirroring the lookup path's
+/// degrade-to-miss policy.
+pub struct EntryIter<'a> {
+  db: &'a SpamDb,
+  block_idx: usize,
+  block: &'a [u8],
+  pos: usize,
+  current: u64,
+}
+
+impl Iterator for EntryIter<'_> {
+  type Item = DbEntry;
+
+  fn next(&mut self) -> Option<DbEntry> {
+    loop {
+      // Advance to the next block when the current one is exhausted.
+      while self.pos >= self.block.len() {
+        if self.block_idx >= self.db.block_count {
+          return None;
+        }
+        let (first, block_off) = self.db.index_entry(self.block_idx);
+        let start = self.db.blocks_off + block_off as usize;
+        let end = if self.block_idx + 1 < self.db.block_count {
+          self.db.blocks_off + self.db.index_entry(self.block_idx + 1).1 as usize
+        } else {
+          self.db.blocks_end
+        };
+        self.block_idx += 1;
+        if start > end || end > self.db.blocks_end {
+          continue; // malformed block — skip
+        }
+        self.block = &self.db.mmap[start..end];
+        self.pos = 0;
+        // Deltas are relative to the index's `first` (0 for the first
+        // entry), same seeding as lookup_exact/iter_all.
+        self.current = first;
+        break;
+      }
+      if self.pos >= self.block.len() {
+        continue;
+      }
+      let Some(delta) = decode_varint(self.block, &mut self.pos) else {
+        self.block = &[];
+        continue;
+      };
+      self.current += delta;
+      if self.pos + 5 > self.block.len() {
+        self.block = &[];
+        continue;
+      }
+      let category = Category::from_u8(self.block[self.pos]);
+      let report_count =
+        u16::from_le_bytes([self.block[self.pos + 1], self.block[self.pos + 2]]);
+      let last_seen_days =
+        u16::from_le_bytes([self.block[self.pos + 3], self.block[self.pos + 4]]);
+      self.pos += 5;
+      if let Some(category) = category {
+        return Some(DbEntry {
+          number: self.current,
+          category,
+          report_count,
+          last_seen_days,
+        });
+      }
+    }
+  }
+}
+
 #[cfg(test)]
 mod tests {
   use super::*;
@@ -642,6 +733,19 @@ mod tests {
     b.build_to(&path.0).unwrap();
     let db = SpamDb::open(&path.0).unwrap();
     (path, db)
+  }
+
+  #[test]
+  fn iter_entries_streams_everything_in_order() {
+    // Enough entries to span multiple 256-entry blocks.
+    let entries: Vec<DbEntry> = (0..1000u64)
+      .map(|i| entry(15_550_000_000 + i * 7, Category::Robocall, (i % 90) as u16))
+      .collect();
+    let (_path, db) = build_tmp(&entries);
+    let streamed: Vec<DbEntry> = db.iter_entries().collect();
+    assert_eq!(streamed.len(), entries.len());
+    assert_eq!(streamed, entries); // same order, same payloads
+    assert!(streamed.windows(2).all(|w| w[0].number < w[1].number));
   }
 
   // Minimal self-cleaning temp file helper (no extra dev-dependency).

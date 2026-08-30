@@ -1,0 +1,35 @@
+/* Bahasa Indonesia — English literals are the keys (development language). */
+
+"Shield" = "Perisai";
+"Rules" = "Aturan";
+"Settings" = "Setelan";
+
+"Protecting your calls" = "Melindungi panggilan Anda";
+"Not active yet" = "Belum aktif";
+"%lld known spam numbers · built %@" = "%lld nomor spam dikenal · dibuat %@";
+"%llu known spam numbers · built %@" = "%llu nomor spam dikenal · dibuat %@";
+"Enable OpenCaller in Settings → Phone → Call Blocking & Identification. iOS then shows our labels on incoming calls and blocks the categories you chose — fully offline." = "Aktifkan OpenCaller di Pengaturan → Telepon → Pemblokiran & Identifikasi Panggilan. iOS lalu menampilkan label kami pada panggilan masuk dan memblokir kategori pilihan Anda — sepenuhnya offline.";
+"Open call blocking settings" = "Buka pengaturan pemblokiran panggilan";
+"Update spam list" = "Perbarui daftar spam";
+"Updating…" = "Memperbarui…";
+"Updated — %llu numbers" = "Diperbarui — %llu nomor";
+"Update failed: %@" = "Pembaruan gagal: %@";
+"One tap downloads the latest reported numbers (about 2 MB, signature-verified on your phone) and reloads the system caller-ID list." = "Satu ketukan mengunduh nomor terlapor terbaru (sekitar 2 MB, tanda tangan diverifikasi di ponsel Anda) dan memuat ulang daftar ID penelepon sistem.";
+"Also enable the SMS filter: Settings → Messages → Unknown & Spam → OpenCaller SMS filter. Reported SMS-spam senders land silently in the Junk tab." = "Aktifkan juga filter SMS: Pengaturan → Pesan → Tak Dikenal & Spam → OpenCaller SMS filter. Pengirim spam SMS terlapor masuk diam-diam ke tab Sampah.";
+
+"Your rules" = "Aturan Anda";
+"Number, e.g. 6281234567890" = "Nomor, mis. 6281234567890";
+"Block" = "Blokir";
+"Blocked" = "Diblokir";
+"Use the full international format without + (country code first). Rules stay on this phone and never mark anyone in the shared database." = "Gunakan format internasional lengkap tanpa + (kode negara di depan). Aturan tetap di ponsel ini dan tidak pernah menandai siapa pun di database bersama.";
+
+"Block calls from" = "Blokir panggilan dari";
+"Scam" = "Penipuan";
+"Robocall" = "Robocall";
+"Telemarketing" = "Telemarketing";
+"Debt collection" = "Penagihan utang";
+"Survey" = "Survei";
+"Other reports" = "Laporan lain";
+"SMS spam" = "Spam SMS";
+"Categories left off still show a warning label on the call screen — the call rings and you decide. Blocked categories never ring." = "Kategori yang tidak dicentang tetap menampilkan label peringatan di layar panggilan — telepon berdering dan Anda yang memutuskan. Kategori yang diblokir tidak pernah berdering.";
+"OpenCaller is free, open source, and fully offline. No account, no ads, no data leaves your phone." = "OpenCaller gratis, open source, dan sepenuhnya offline. Tanpa akun, tanpa iklan, tanpa data keluar dari ponsel Anda.";

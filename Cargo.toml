@@ -4,6 +4,7 @@ members = [
   "crates/opencaller-core",
   "crates/opencaller-pipeline",
   "crates/opencaller-android",
+  "crates/opencaller-ios",
 ]
 
 [workspace.package]

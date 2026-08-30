@@ -441,6 +441,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "opencaller-ios"
+version = "0.1.0"
+dependencies = [
+ "opencaller-core",
+]
+
+[[package]]
 name = "opencaller-pipeline"
 version = "0.1.0"
 dependencies = [

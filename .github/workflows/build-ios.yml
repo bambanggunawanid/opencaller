@@ -1,0 +1,58 @@
+# Builds the iOS app (unsigned IPA) on a macOS runner: Rust core for
+# aarch64-apple-ios + XcodeGen + xcodebuild without code signing.
+# Signing needs an Apple Developer identity we don't put in CI — users
+# sideload the unsigned IPA with AltStore/Sideloadly (free Apple ID),
+# which re-signs it on install.
+name: build-ios
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  ipa:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Rust + seed resources
+        run: bash scripts/build-ios-rust.sh
+
+      - name: Generate Xcode project
+        run: |
+          brew install xcodegen
+          cd ios
+          xcodegen generate
+
+      - name: Build (unsigned)
+        run: |
+          cd ios
+          xcodebuild -project OpenCaller.xcodeproj -scheme OpenCaller \
+            -configuration Release -destination 'generic/platform=iOS' \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            SYMROOT="$PWD/build" build
+
+      - name: Package IPA
+        run: |
+          cd ios
+          mkdir -p Payload
+          cp -R "build/Release-iphoneos/OpenCaller.app" Payload/
+          zip -qry opencaller-ios-unsigned.ipa Payload
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: opencaller-ios-unsigned
+          path: ios/opencaller-ios-unsigned.ipa
+
+      - name: Attach to release (tag builds)
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release upload "$GITHUB_REF_NAME" \
+            ios/opencaller-ios-unsigned.ipa --clobber
