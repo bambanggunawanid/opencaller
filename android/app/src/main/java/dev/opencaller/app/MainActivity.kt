@@ -310,6 +310,16 @@ fun HomeScreen() {
 
     item { Text("Your rules", style = MaterialTheme.typography.titleMedium) }
     item {
+      Text(
+        "Heads-up: Android never sends calls from saved contacts to " +
+          "screening apps, so rules can't fire for them. For an annoying " +
+          "auto-saved number (e.g. your operator): unsave or hide it " +
+          "(Contacts → Contacts to display → uncheck SIM), or block it in " +
+          "the Phone app — the system blocklist works even for contacts.",
+        style = MaterialTheme.typography.bodySmall,
+      )
+    }
+    item {
       var ruleInput by remember { mutableStateOf("") }
       var blockRules by remember { mutableStateOf(Prefs.blockRules(context).sorted()) }
       var allowRules by remember { mutableStateOf(Prefs.allowRules(context).sorted()) }
