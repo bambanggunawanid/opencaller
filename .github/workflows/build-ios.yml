@@ -57,13 +57,8 @@ jobs:
         run: |
           cd ios
           app="build/Release-iphoneos/OpenCaller.app"
-          # Diagnostics + normalization: codesign rejects symlinked or
-          # oddly-copied resource dirs ("unsuitable ... In subcomponent").
-          find "$app" -maxdepth 2 \( -type l -o -type d \) -ls
-          # Replace any symlinked resource dirs with real copies.
-          find "$app" -maxdepth 1 -type l | while read -r link; do
-            real=$(readlink -f "$link"); rm "$link"; cp -R "$real" "$link"
-          done
+          find "$app" -ls
+          file "$app"/id.lproj/* || true
           xattr -cr "$app"
           # Ad-hoc signatures (no certificate needed) carrying the App
           # Group entitlements, inside-out — so sideloading tools can read
@@ -74,9 +69,13 @@ jobs:
           codesign -f -s - \
             --entitlements MessageFilterExtension/MessageFilterExtension.entitlements \
             "$app/PlugIns/MessageFilterExtension.appex"
+          # Best-effort for the outer app: sideloading tools re-sign the
+          # whole bundle on install anyway; the extensions' ad-hoc
+          # signatures above are what carries the App Group entitlements.
           codesign -f -s - \
             --entitlements OpenCaller/OpenCaller.entitlements \
-            "$app"
+            "$app" \
+            || echo "::warning::app-level ad-hoc codesign failed (IPA is unsigned anyway; sideload tools re-sign)"
           mkdir -p Payload
           cp -R "$app" Payload/
           zip -qry opencaller-ios-unsigned.ipa Payload
