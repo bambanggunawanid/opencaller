@@ -32,18 +32,45 @@ jobs:
       - name: Build (unsigned)
         run: |
           cd ios
+          set -o pipefail
+          # ValidateEmbeddedBinary reads code signatures that unsigned
+          # builds intentionally lack ("cannot compute parent bundle
+          # path") and Xcode has no working switch to skip it — but the
+          # .app with both embedded .appex is fully assembled before that
+          # step. Tolerate exactly that error; anything else is fatal,
+          # and the artifacts are existence-checked below.
           xcodebuild -project OpenCaller.xcodeproj -scheme OpenCaller \
             -configuration Release -destination 'generic/platform=iOS' \
             CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \
             CODE_SIGN_IDENTITY="" \
-            VALIDATE_EMBEDDED_BINARIES=NO \
-            SYMROOT="$PWD/build" build
+            SYMROOT="$PWD/build" build 2>&1 | tee xcodebuild.log || true
+          if grep "error: " xcodebuild.log \
+            | grep -v "cannot compute parent bundle path" | grep -q .; then
+            echo "::error::unexpected build errors"; exit 1
+          fi
+          app="build/Release-iphoneos/OpenCaller.app"
+          test -f "$app/OpenCaller"
+          test -d "$app/PlugIns/CallDirectoryExtension.appex"
+          test -d "$app/PlugIns/MessageFilterExtension.appex"
 
-      - name: Package IPA
+      - name: Package IPA (ad-hoc signed)
         run: |
           cd ios
+          app="build/Release-iphoneos/OpenCaller.app"
+          # Ad-hoc signatures (no certificate needed) carrying the App
+          # Group entitlements, inside-out — so sideloading tools can read
+          # and remap the entitlements when they re-sign on install.
+          codesign -f -s - \
+            --entitlements CallDirectoryExtension/CallDirectoryExtension.entitlements \
+            "$app/PlugIns/CallDirectoryExtension.appex"
+          codesign -f -s - \
+            --entitlements MessageFilterExtension/MessageFilterExtension.entitlements \
+            "$app/PlugIns/MessageFilterExtension.appex"
+          codesign -f -s - \
+            --entitlements OpenCaller/OpenCaller.entitlements \
+            "$app"
           mkdir -p Payload
-          cp -R "build/Release-iphoneos/OpenCaller.app" Payload/
+          cp -R "$app" Payload/
           zip -qry opencaller-ios-unsigned.ipa Payload
 
       - uses: actions/upload-artifact@v4
