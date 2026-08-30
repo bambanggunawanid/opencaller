@@ -51,6 +51,39 @@ object Prefs {
     prefs(context).edit().putString("own_number", number).apply()
   }
 
+  // ---- F5 user rules (see RuleEngine for format and precedence) ----
+
+  fun allowRules(context: Context): Set<String> =
+    prefs(context).getStringSet("rules.allow", emptySet()) ?: emptySet()
+
+  fun blockRules(context: Context): Set<String> =
+    prefs(context).getStringSet("rules.block", emptySet()) ?: emptySet()
+
+  /** Returns false if the rule normalizes to nothing. */
+  fun addRule(context: Context, block: Boolean, raw: String): Boolean {
+    val rule = RuleEngine.normalizeRule(raw) ?: return false
+    val key = if (block) "rules.block" else "rules.allow"
+    val set = (prefs(context).getStringSet(key, emptySet()) ?: emptySet()).toMutableSet()
+    set.add(rule)
+    prefs(context).edit().putStringSet(key, set).apply()
+    return true
+  }
+
+  fun removeRule(context: Context, block: Boolean, rule: String) {
+    val key = if (block) "rules.block" else "rules.allow"
+    val set = (prefs(context).getStringSet(key, emptySet()) ?: emptySet()).toMutableSet()
+    set.remove(rule)
+    prefs(context).edit().putStringSet(key, set).apply()
+  }
+
+  /** F5 "silence all unknown numbers" mode. Off by default. */
+  fun silenceUnknown(context: Context): Boolean =
+    prefs(context).getBoolean("silence_unknown", false)
+
+  fun setSilenceUnknown(context: Context, on: Boolean) {
+    prefs(context).edit().putBoolean("silence_unknown", on).apply()
+  }
+
   fun updateMode(context: Context): UpdateMode {
     val raw = prefs(context).getString("update_mode", null)
       ?: return UpdateMode.WIFI_ONLY

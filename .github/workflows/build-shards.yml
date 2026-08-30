@@ -8,6 +8,9 @@ on:
     - cron: "0 3 * * 1" # Mondays 03:00 UTC — matches the weekly epoch
   workflow_dispatch:
 
+permissions:
+  contents: write # publish the shard release
+
 jobs:
   us-shard:
     runs-on: ubuntu-latest
@@ -37,13 +40,18 @@ jobs:
           cargo run --release -p opencaller-pipeline -- verify \
             --pubkey android/app/src/main/assets/shard_signing.pub us.ocdb
 
-      - name: Upload shard artifact
-        uses: actions/upload-artifact@v4
+      # The app fetches from releases/latest/download/<file>, so each run
+      # publishes a dated release marked latest. Clients verify the Ed25519
+      # signature against the pinned pubkey — the release channel needs no
+      # trust (PRD §9).
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
         with:
-          name: us-shard
-          path: |
+          tag_name: shards-${{ github.run_id }}
+          name: "DB shards ${{ github.run_id }}"
+          body: "Weekly signed OCDB shards. Verify with android/app/src/main/assets/shard_signing.pub."
+          make_latest: "true"
+          files: |
             us.ocdb
             us.ocdb.sig
             us.ocdb.manifest.json
-      # Publishing to GitHub Releases (the app's update URL) is enabled
-      # once the release channel is decided — PRD §11.

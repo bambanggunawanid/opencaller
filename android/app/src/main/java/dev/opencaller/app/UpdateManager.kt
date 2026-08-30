@@ -16,10 +16,11 @@ import java.net.URL
  */
 object UpdateManager {
   /**
-   * Base URL of the published shards (GitHub Releases / CDN — PRD §11).
-   * Blank until the release channel exists; the UI degrades gracefully.
+   * Base URL of the published shards (PRD §11): the repo's latest release.
+   * The transport is untrusted — only the Ed25519 signature matters.
    */
-  const val UPDATE_BASE_URL = ""
+  const val UPDATE_BASE_URL =
+    "https://github.com/bambanggunawanid/opencaller/releases/latest/download"
 
   private const val MAX_SHARD_BYTES = 256L * 1024 * 1024
 

@@ -180,6 +180,76 @@ fun HomeScreen() {
       }
     }
 
+    item { Text("Your rules", style = MaterialTheme.typography.titleMedium) }
+    item {
+      var ruleInput by remember { mutableStateOf("") }
+      var blockRules by remember { mutableStateOf(Prefs.blockRules(context).sorted()) }
+      var allowRules by remember { mutableStateOf(Prefs.allowRules(context).sorted()) }
+      Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        OutlinedTextField(
+          value = ruleInput,
+          onValueChange = { ruleInput = it },
+          label = { Text("Number or prefix (end with * for prefix)") },
+          modifier = Modifier.fillMaxWidth(),
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+          Button(onClick = {
+            if (Prefs.addRule(context, block = true, ruleInput)) {
+              blockRules = Prefs.blockRules(context).sorted()
+              ruleInput = ""
+            }
+          }) { Text("Block") }
+          Button(onClick = {
+            if (Prefs.addRule(context, block = false, ruleInput)) {
+              allowRules = Prefs.allowRules(context).sorted()
+              ruleInput = ""
+            }
+          }) { Text("Always allow") }
+        }
+        for (rule in blockRules) {
+          Row(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+          ) {
+            Text("⛔ $rule", style = MaterialTheme.typography.bodyMedium)
+            TextButton(onClick = {
+              Prefs.removeRule(context, block = true, rule)
+              blockRules = Prefs.blockRules(context).sorted()
+            }) { Text("remove") }
+          }
+        }
+        for (rule in allowRules) {
+          Row(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+          ) {
+            Text("✅ $rule", style = MaterialTheme.typography.bodyMedium)
+            TextButton(onClick = {
+              Prefs.removeRule(context, block = false, rule)
+              allowRules = Prefs.allowRules(context).sorted()
+            }) { Text("remove") }
+          }
+        }
+      }
+    }
+
+    item {
+      var silenceUnknown by remember { mutableStateOf(Prefs.silenceUnknown(context)) }
+      Row(
+        Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+      ) {
+        Text("Silence all unknown numbers", style = MaterialTheme.typography.bodyLarge)
+        TextButton(onClick = {
+          silenceUnknown = !silenceUnknown
+          Prefs.setSilenceUnknown(context, silenceUnknown)
+        }) { Text(if (silenceUnknown) "ON" else "OFF") }
+      }
+    }
+
     item { Text("Recent screening events", style = MaterialTheme.typography.titleMedium) }
     items(events) { e ->
       Text("${e.number} — ${e.verdict}", style = MaterialTheme.typography.bodyMedium)

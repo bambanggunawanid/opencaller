@@ -24,19 +24,30 @@ class ScreeningService : CallScreeningService() {
       return
     }
 
-    val hit = DbManager.lookup(this, number)
-    val (category, detail) = if (hit != null) {
-      hit.category to "${hit.category}:${hit.reportCount}"
-    } else {
-      val suspicion = NativeCore.nativeHeuristic(
-        normalizeCandidate(number),
-        Prefs.ownNumber(this),
-      )
-      if (suspicion != null) Prefs.HEURISTIC to "heuristic:$suspicion"
-      else null to null
+    // Precedence (F5): user ALLOW > user BLOCK > DB > heuristics > unknown.
+    val ruleVerdict =
+      RuleEngine.evaluate(number, Prefs.allowRules(this), Prefs.blockRules(this))
+    val hit = if (ruleVerdict == null) DbManager.lookup(this, number) else null
+
+    val (action, detail) = when {
+      ruleVerdict == RuleEngine.Verdict.ALLOW -> Prefs.Action.ALLOW to "user-allow"
+      ruleVerdict == RuleEngine.Verdict.BLOCK -> Prefs.Action.REJECT to "user-block"
+      hit != null ->
+        Prefs.action(this, hit.category) to "${hit.category}:${hit.reportCount}"
+      else -> {
+        val suspicion = NativeCore.nativeHeuristic(
+          normalizeCandidate(number),
+          Prefs.ownNumber(this),
+        )
+        when {
+          suspicion != null ->
+            Prefs.action(this, Prefs.HEURISTIC) to "heuristic:$suspicion"
+          Prefs.silenceUnknown(this) -> Prefs.Action.SILENCE to "unknown-mode"
+          else -> Prefs.Action.ALLOW to null
+        }
+      }
     }
 
-    val action = category?.let { Prefs.action(this, it) } ?: Prefs.Action.ALLOW
     val response = when (action) {
       Prefs.Action.ALLOW -> CallResponse.Builder().build()
       Prefs.Action.SILENCE -> CallResponse.Builder().setSilenceCall(true).build()
@@ -52,7 +63,7 @@ class ScreeningService : CallScreeningService() {
       number,
       when {
         detail == null -> "unknown"
-        action == Prefs.Action.ALLOW -> "flagged:$detail"
+        action == Prefs.Action.ALLOW -> "allowed:$detail"
         else -> "${action.name.lowercase()}:$detail"
       },
     )
