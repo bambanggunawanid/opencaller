@@ -63,9 +63,13 @@ class CallNotificationListener : NotificationListenerService() {
   }
 
   private companion object {
-    val WATCHED = mapOf(
-      "com.whatsapp" to "WhatsApp",
-      "com.whatsapp.w4b" to "WhatsApp Business",
-    )
+    val WATCHED = buildMap {
+      put("com.whatsapp", "WhatsApp")
+      put("com.whatsapp.w4b", "WhatsApp Business")
+      // Debug builds also watch our own package so the in-app "simulate"
+      // button can exercise this whole pipeline without a second phone.
+      // No loop risk: our warnings are CATEGORY_STATUS, filtered above.
+      if (BuildConfig.DEBUG) put(BuildConfig.APPLICATION_ID, "Test")
+    }
   }
 }

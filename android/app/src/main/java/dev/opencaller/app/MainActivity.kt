@@ -268,6 +268,28 @@ fun HomeScreen() {
             "Tip: WhatsApp Settings → Privacy → Calls can silence unknown callers.",
           style = MaterialTheme.typography.bodySmall,
         )
+        if (BuildConfig.DEBUG) {
+          TextButton(onClick = {
+            // Post a WhatsApp-style CATEGORY_CALL notification from our own
+            // package; debug builds watch it, so the full listener pipeline
+            // runs (parse → lookup → warn) with a number known to the DB.
+            Notifier.ensureChannel(context)
+            val nm = androidx.core.app.NotificationManagerCompat.from(context)
+            val fake = androidx.core.app.NotificationCompat
+              .Builder(context, Notifier.CHANNEL)
+              .setSmallIcon(R.drawable.ic_notification)
+              .setContentTitle("+1 828-300-3919")
+              .setContentText("Incoming voice call (simulated)")
+              .setCategory(androidx.core.app.NotificationCompat.CATEGORY_CALL)
+              .build()
+            try {
+              nm.notify(424242, fake)
+            } catch (_: SecurityException) {
+            }
+            android.os.Handler(android.os.Looper.getMainLooper())
+              .postDelayed({ nm.cancel(424242) }, 3000)
+          }) { Text("Simulate call notification (debug)") }
+        }
       }
     }
 

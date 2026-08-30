@@ -17,7 +17,7 @@ import androidx.core.app.NotificationManagerCompat
  * already decided), and silence-unknown mode hits (a mode, not a verdict).
  */
 object Notifier {
-  private const val CHANNEL = "screening"
+  const val CHANNEL = "screening"
 
   fun ensureChannel(context: Context) {
     val nm = context.getSystemService(NotificationManager::class.java) ?: return

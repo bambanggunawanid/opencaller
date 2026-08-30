@@ -38,6 +38,7 @@ android {
   }
   buildFeatures {
     compose = true
+    buildConfig = true // debug-only test hooks gate on BuildConfig.DEBUG
   }
 }
 
