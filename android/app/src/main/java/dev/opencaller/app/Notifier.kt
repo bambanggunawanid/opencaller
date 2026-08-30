@@ -37,13 +37,13 @@ object Notifier {
     number: String,
     action: Prefs.Action,
     detail: String,
-    appLabel: String? = null,
+    what: String = "call",
   ) {
     val nm = NotificationManagerCompat.from(context)
     if (!nm.areNotificationsEnabled()) return
     ensureChannel(context)
 
-    val callWord = if (appLabel == null) "call" else "$appLabel call"
+    val callWord = what
     val title = when (action) {
       Prefs.Action.REJECT -> "Blocked $callWord"
       Prefs.Action.SILENCE -> "Silenced suspicious $callWord"

@@ -38,6 +38,9 @@ pub enum Category {
   DebtCollection = 3,
   Survey = 4,
   Other = 5,
+  /// Sender reported for spam text messages (FCC "Text Message" rows).
+  /// Older app versions treat the unknown discriminant as a miss — safe.
+  SmsSpam = 6,
 }
 
 impl Category {
@@ -49,6 +52,7 @@ impl Category {
       3 => Some(Self::DebtCollection),
       4 => Some(Self::Survey),
       5 => Some(Self::Other),
+      6 => Some(Self::SmsSpam),
       _ => None,
     }
   }
@@ -61,6 +65,7 @@ impl Category {
       Self::DebtCollection => "debt-collection",
       Self::Survey => "survey",
       Self::Other => "other",
+      Self::SmsSpam => "sms-spam",
     }
   }
 }

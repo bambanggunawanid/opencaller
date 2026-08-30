@@ -308,6 +308,56 @@ fun HomeScreen() {
       }
     }
 
+    item {
+      var smsMode by remember { mutableStateOf(Prefs.smsMode(context)) }
+      Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Row(
+          Modifier.fillMaxWidth(),
+          horizontalArrangement = Arrangement.SpaceBetween,
+          verticalAlignment = Alignment.CenterVertically,
+        ) {
+          Text("SMS spam protection", style = MaterialTheme.typography.bodyLarge)
+          TextButton(onClick = {
+            val next =
+              Prefs.SmsMode.entries[(smsMode.ordinal + 1) % Prefs.SmsMode.entries.size]
+            smsMode = next
+            Prefs.setSmsMode(context, next)
+          }) { Text(smsMode.name) }
+        }
+        Text(
+          "Optional, uses the same notification access. WARN adds a banner " +
+            "next to spam texts. MUTE silences the notification for senders " +
+            "in your block rules or reported for SMS spam — the message " +
+            "still arrives in your inbox, just without the buzz. Only " +
+            "sender info from your SMS app's notifications is read, " +
+            "locally. True SMS blocking would require replacing your " +
+            "messaging app — the trade we refuse. " +
+            "Tip: block gateway senders by name, e.g. add a rule " +
+            "\"IM3 Promo\" or \"3Untukmu\".",
+          style = MaterialTheme.typography.bodySmall,
+        )
+        if (BuildConfig.DEBUG) {
+          TextButton(onClick = {
+            Notifier.ensureChannel(context)
+            val nm = androidx.core.app.NotificationManagerCompat.from(context)
+            val fake = androidx.core.app.NotificationCompat
+              .Builder(context, Notifier.CHANNEL)
+              .setSmallIcon(R.drawable.ic_notification)
+              .setContentTitle("+1 951-851-4805")
+              .setContentText("KAMU HOKI! You won a prize (simulated)")
+              .setCategory(androidx.core.app.NotificationCompat.CATEGORY_MESSAGE)
+              .build()
+            try {
+              nm.notify(424244, fake)
+            } catch (_: SecurityException) {
+            }
+            android.os.Handler(android.os.Looper.getMainLooper())
+              .postDelayed({ nm.cancel(424244) }, 3000)
+          }) { Text("Simulate spam SMS (debug)") }
+        }
+      }
+    }
+
     item { Text("Your rules", style = MaterialTheme.typography.titleMedium) }
     item {
       Text(
@@ -327,7 +377,7 @@ fun HomeScreen() {
         OutlinedTextField(
           value = ruleInput,
           onValueChange = { ruleInput = it },
-          label = { Text("Number or prefix (end with * for prefix)") },
+          label = { Text("Number, sender name, or prefix (* suffix)") },
           modifier = Modifier.fillMaxWidth(),
         )
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

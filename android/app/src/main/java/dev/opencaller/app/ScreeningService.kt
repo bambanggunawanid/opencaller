@@ -25,8 +25,11 @@ class ScreeningService : CallScreeningService() {
     }
 
     // Precedence (F5): user ALLOW > user BLOCK > DB > heuristics > unknown.
-    val ruleVerdict =
-      RuleEngine.evaluate(number, Prefs.allowRules(this), Prefs.blockRules(this))
+    val ruleVerdict = RuleEngine.evaluate(
+      number = number,
+      allowRules = Prefs.allowRules(this),
+      blockRules = Prefs.blockRules(this),
+    )
     val hit = if (ruleVerdict == null) DbManager.lookup(this, number) else null
 
     val (action, detail) = when {

@@ -127,8 +127,13 @@ These are commitments, displayed in-app and enforced by architecture:
   turns users into contributors to the public datasets we consume).
 
 ### Phase 3 (exploratory)
-- SMS spam filtering (Android `SmsFilterService` / iOS `ILMessageFilterExtension` —
-  note iOS message filters may not use the network either, which fits us).
+- ~~SMS spam filtering (Android)~~ — shipped early (2026-08-30) as
+  notification-layer warn+mute: Android reserves true SMS filtering for the
+  default SMS app (the Truecaller trade — full power for custody of every
+  message — which we refuse). MUTE cancels the SMS app's notification for
+  block-ruled or sms-spam-category senders; FCC "Text Message" complaints
+  now feed an `sms-spam` DB category; sender-name rules cover alphanumeric
+  gateway IDs. iOS later via `ILMessageFilterExtension` (offline by design).
 - P2P database distribution (torrent/IPFS mirror) for censorship resistance.
 
 ## 7. Architecture, platform notes & constraints

@@ -117,11 +117,14 @@ struct IngestStats {
   skipped_non_call: u64,
 }
 
-/// FCC row → category. `issue` distinguishes robocalls; the call-type field
-/// separates prerecorded from live telemarketing.
+/// FCC row → category. Text-message complaints feed the SMS shield (F-SMS);
+/// `issue` distinguishes robocalls; the call-type field separates
+/// prerecorded from live telemarketing.
 fn map_fcc(issue: &str, call_type: &str) -> Category {
   let (issue, call_type) = (issue.to_ascii_lowercase(), call_type.to_ascii_lowercase());
-  if call_type.contains("prerecorded") || issue.contains("robocall") {
+  if call_type.contains("text message") {
+    Category::SmsSpam
+  } else if call_type.contains("prerecorded") || issue.contains("robocall") {
     Category::Robocall
   } else {
     Category::Telemarketing
@@ -161,10 +164,6 @@ fn ingest_csvs(
         let record = record.map_err(|e| e.to_string())?;
         stats.rows += 1;
         let call_type = c_type.and_then(|c| record.get(c)).unwrap_or_default();
-        if call_type.eq_ignore_ascii_case("Text Message") {
-          stats.skipped_non_call += 1;
-          continue;
-        }
         let Some(number) = record.get(c_phone).and_then(normalize_nanp) else {
           stats.skipped_bad_number += 1;
           continue;
@@ -473,14 +472,16 @@ mod tests {
 
     let (agg, stats) = ingest_csvs(&[csv_path], 0, 20_700).unwrap();
     assert_eq!(stats.rows, 5);
-    assert_eq!(stats.skipped_non_call, 1); // SMS row
+    assert_eq!(stats.skipped_non_call, 0);
     assert_eq!(stats.skipped_bad_number, 1); // 7-digit number
-    assert_eq!(agg.len(), 2);
+    assert_eq!(agg.len(), 3);
     let robo = &agg[&19_165_183_100];
     assert_eq!(robo.count, 2);
     assert_eq!(robo.latest_days, 20_700); // stamped with --today
     assert_eq!(majority_category(&robo.votes), Category::Robocall);
     assert_eq!(majority_category(&agg[&15_129_036_103].votes), Category::Telemarketing);
+    // Text-message complaints now feed the SMS shield.
+    assert_eq!(majority_category(&agg[&18_604_514_226].votes), Category::SmsSpam);
 
     fs::remove_dir_all(&dir).ok();
   }

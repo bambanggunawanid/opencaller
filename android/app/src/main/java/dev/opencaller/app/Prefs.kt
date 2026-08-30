@@ -17,7 +17,20 @@ object Prefs {
   /** Order matches core's Category severity ordering. */
   val CATEGORIES = listOf(
     "scam", "robocall", "telemarketing", "debt-collection", "survey", "other",
+    "sms-spam",
   )
+
+  /** F-SMS: what the notification listener does with spam texts. */
+  enum class SmsMode { OFF, WARN, MUTE }
+
+  fun smsMode(context: Context): SmsMode {
+    val raw = prefs(context).getString("sms_mode", null) ?: return SmsMode.OFF
+    return runCatching { SmsMode.valueOf(raw) }.getOrDefault(SmsMode.OFF)
+  }
+
+  fun setSmsMode(context: Context, mode: SmsMode) {
+    prefs(context).edit().putString("sms_mode", mode.name).apply()
+  }
 
   /** Pseudo-category for F7 heuristic verdicts (spoofing/invalid numbers). */
   const val HEURISTIC = "suspicious"
