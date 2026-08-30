@@ -45,6 +45,14 @@ android {
   }
 
   buildTypes {
+    debug {
+      // Sign debug builds with the release key when available so field
+      // testers can switch debug<->release without uninstalling
+      // (per-machine auto debug keys would break upgrades otherwise).
+      if (keystoreProps.isNotEmpty()) {
+        signingConfig = signingConfigs.getByName("release")
+      }
+    }
     release {
       isMinifyEnabled = true
       isShrinkResources = true

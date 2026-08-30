@@ -53,11 +53,16 @@ jobs:
             echo "keyPassword=$KS_PASS"
           } > android/keystore.properties
 
-      - name: Build signed release APK
-        run: cd android && ./gradlew assembleRelease
+      - name: Build signed release + debug APKs
+        run: cd android && ./gradlew assembleRelease assembleDebug
 
-      - name: Stage artifact
-        run: cp android/app/build/outputs/apk/release/app-release.apk "opencaller-${GITHUB_REF_NAME}.apk"
+      - name: Stage artifacts
+        # Debug build ships too: it carries the simulators/diagnostics for
+        # field testing, and is signed with the same release key so
+        # debug<->release switches need no uninstall.
+        run: |
+          cp android/app/build/outputs/apk/release/app-release.apk "opencaller-${GITHUB_REF_NAME}.apk"
+          cp android/app/build/outputs/apk/debug/app-debug.apk "opencaller-${GITHUB_REF_NAME}-debug.apk"
 
       - uses: softprops/action-gh-release@v2
         with:
