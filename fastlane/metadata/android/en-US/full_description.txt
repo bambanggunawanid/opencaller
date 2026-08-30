@@ -1,0 +1,22 @@
+OpenCaller identifies and blocks spam, scam, and robocalls — entirely on your phone.
+
+The spam database lives on your device. Lookups happen offline in microseconds while the call rings. No account, no ads, and no server ever sees who calls you.
+
+WHAT IT DOES
+• Screens incoming calls against a signed database of reported spam numbers (built weekly from public government complaint data: US FTC and FCC)
+• Silences or rejects spam by category — you decide per category
+• Detects spoofed callers with no database at all: numbers faking your own prefix, your own number, or structurally impossible numbers — works in every country
+• Personal rules: block or always-allow numbers, prefixes (+1800*), and SMS sender names (like promo gateways)
+• Optional: warnings for WhatsApp calls from reported numbers, spam-SMS warning/muting, and a large on-screen warning badge — each behind its own opt-in permission
+• Weekly database updates you control: Wi-Fi only, any network, or off
+
+WHAT IT REFUSES TO DO
+• No contacts access — ever. We cannot upload your address book because we never ask for it.
+• No accounts, no analytics, no trackers, no ads.
+• No "see who viewed your profile". No name lookup of strangers — that feature only exists in apps that harvest everyone's contact books. That's the practice this app exists to reject.
+• It will not become your default dialer or SMS app. Your calls and messages stay in the apps you chose.
+
+HOW UPDATES STAY TRUSTWORTHY
+Every database file is Ed25519-signed; the app refuses anything that does not verify against its pinned key, and refuses rollbacks to older data. The download server needs no trust at all.
+
+The permission list is the privacy policy. Everything is open source and verifiable.

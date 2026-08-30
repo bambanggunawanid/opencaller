@@ -1,7 +1,17 @@
+import java.util.Properties
+
 plugins {
   id("com.android.application")
   id("org.jetbrains.kotlin.android")
   id("org.jetbrains.kotlin.plugin.compose")
+}
+
+// Release signing lives OUTSIDE the repo: android/keystore.properties
+// (gitignored) points at the keystore. CI reconstructs both from secrets.
+// Without it, release builds are unsigned (debug builds unaffected).
+val keystoreProps = Properties().apply {
+  val f = rootProject.file("keystore.properties")
+  if (f.exists()) f.inputStream().use { load(it) }
 }
 
 android {
@@ -13,8 +23,8 @@ android {
     // CallScreeningService role exists since API 29 (Android 10) — PRD §7.
     minSdk = 29
     targetSdk = 35
-    versionCode = 1
-    versionName = "0.1.0"
+    versionCode = 2
+    versionName = "0.2.0"
 
     // Only ABIs we cross-compile the Rust core for (cargo ndk -t ...);
     // shipping other ABIs would crash on loadLibrary.
@@ -23,9 +33,28 @@ android {
     }
   }
 
+  signingConfigs {
+    create("release") {
+      if (keystoreProps.isNotEmpty()) {
+        storeFile = file(keystoreProps["storeFile"] as String)
+        storePassword = keystoreProps["storePassword"] as String
+        keyAlias = keystoreProps["keyAlias"] as String
+        keyPassword = keystoreProps["keyPassword"] as String
+      }
+    }
+  }
+
   buildTypes {
     release {
-      isMinifyEnabled = false
+      isMinifyEnabled = true
+      isShrinkResources = true
+      proguardFiles(
+        getDefaultProguardFile("proguard-android-optimize.txt"),
+        "proguard-rules.pro",
+      )
+      if (keystoreProps.isNotEmpty()) {
+        signingConfig = signingConfigs.getByName("release")
+      }
     }
   }
 

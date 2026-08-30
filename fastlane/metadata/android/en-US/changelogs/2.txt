@@ -1,0 +1,5 @@
+First signed release.
+• Offline call screening (US FTC+FCC database, 200k+ numbers) + spoof heuristics
+• Per-category actions, personal rules (numbers, prefixes, SMS sender names)
+• Signed weekly DB updates with rollback protection
+• Opt-in: WhatsApp call warnings, SMS warn/mute, on-screen spam badge
