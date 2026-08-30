@@ -38,6 +38,10 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 
 class MainActivity : ComponentActivity() {
+  override fun attachBaseContext(newBase: android.content.Context) {
+    super.attachBaseContext(L10n.wrap(newBase))
+  }
+
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
     DbManager.ensureOpen(this)
@@ -60,11 +64,11 @@ fun OpenCallerTheme(content: @Composable () -> Unit) {
   MaterialTheme(colorScheme = scheme, content = content)
 }
 
-private enum class Tab(val label: String, val icon: ImageVector) {
-  SHIELD("Shield", Icons.Filled.Shield),
-  ACTIVITY("Activity", Icons.Filled.History),
-  RULES("Rules", Icons.Filled.Block),
-  SETTINGS("Settings", Icons.Filled.Settings),
+private enum class Tab(val labelRes: Int, val icon: ImageVector) {
+  SHIELD(R.string.tab_shield, Icons.Filled.Shield),
+  ACTIVITY(R.string.tab_activity, Icons.Filled.History),
+  RULES(R.string.tab_rules, Icons.Filled.Block),
+  SETTINGS(R.string.tab_settings, Icons.Filled.Settings),
 }
 
 @Composable
@@ -90,11 +94,12 @@ fun OpenCallerApp() {
     bottomBar = {
       NavigationBar {
         Tab.entries.forEachIndexed { i, t ->
+          val label = androidx.compose.ui.res.stringResource(t.labelRes)
           NavigationBarItem(
             selected = tab == i,
             onClick = { tab = i },
-            icon = { Icon(t.icon, contentDescription = t.label) },
-            label = { Text(t.label) },
+            icon = { Icon(t.icon, contentDescription = label) },
+            label = { Text(label) },
           )
         }
       }

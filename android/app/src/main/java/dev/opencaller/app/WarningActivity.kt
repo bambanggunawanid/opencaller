@@ -23,6 +23,10 @@ import android.widget.TextView
  */
 class WarningActivity : Activity() {
 
+  override fun attachBaseContext(newBase: android.content.Context) {
+    super.attachBaseContext(L10n.wrap(newBase))
+  }
+
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
     setShowWhenLocked(true)
@@ -39,7 +43,7 @@ class WarningActivity : Activity() {
       setPadding(dp(32), dp(32), dp(32), dp(32))
     }
     root.addView(TextView(this).apply {
-      text = intent.getStringExtra(EXTRA_TITLE) ?: "⚠ Suspicious call"
+      text = intent.getStringExtra(EXTRA_TITLE) ?: getString(R.string.overlay_suspicious_call)
       setTextColor(Color.WHITE)
       textSize = 30f
       gravity = Gravity.CENTER
@@ -53,7 +57,7 @@ class WarningActivity : Activity() {
       setPadding(0, dp(16), 0, 0)
     })
     root.addView(TextView(this).apply {
-      text = "OpenCaller • tap anywhere to dismiss"
+      text = getString(R.string.warning_footer)
       setTextColor(0xCCFFFFFF.toInt())
       textSize = 13f
       gravity = Gravity.CENTER

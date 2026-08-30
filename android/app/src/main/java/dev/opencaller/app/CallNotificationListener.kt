@@ -116,11 +116,12 @@ class CallNotificationListener : NotificationListenerService() {
           ?.let { "heuristic:$it" }
     } ?: return
 
-    Notifier.postVerdict(this, title.trim(), Prefs.Action.ALLOW, detail, "$appLabel call")
+    val what = L10n.str(this, R.string.what_app_call, appLabel)
+    Notifier.postVerdict(this, title.trim(), Prefs.Action.ALLOW, detail, what)
     OverlayWarning.show(
       this,
-      "⚠ Suspicious $appLabel call",
-      "${title.trim()} — ${Notifier.friendly(detail)}",
+      L10n.str(this, R.string.notif_suspicious, what),
+      "${title.trim()} — ${Notifier.friendly(this, detail)}",
     )
     DbManager.logEvent(this, digits, "warned:${appLabel.lowercase().replace(' ', '-')}:$detail")
   }
@@ -164,11 +165,12 @@ class CallNotificationListener : NotificationListenerService() {
       DbManager.logEvent(this, key, "muted:sms:$detail")
     } else {
       if (!shouldProcess(key)) return
-      Notifier.postVerdict(this, title.trim(), Prefs.Action.ALLOW, detail, "text message")
+      val what = L10n.str(this, R.string.what_sms)
+      Notifier.postVerdict(this, title.trim(), Prefs.Action.ALLOW, detail, what)
       OverlayWarning.show(
         this,
-        "⚠ Suspicious text message",
-        "${title.trim()} — ${Notifier.friendly(detail)}",
+        L10n.str(this, R.string.notif_suspicious, what),
+        "${title.trim()} — ${Notifier.friendly(this, detail)}",
       )
       DbManager.logEvent(this, key, "warned:sms:$detail")
     }

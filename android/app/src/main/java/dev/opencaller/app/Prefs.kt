@@ -154,6 +154,14 @@ object Prefs {
     prefs(context).edit().putBoolean("wangiri_learn", on).apply()
   }
 
+  /** UI language override: "" = follow system, else a BCP-47 tag. */
+  fun language(context: Context): String =
+    prefs(context).getString("language", "") ?: ""
+
+  fun setLanguage(context: Context, tag: String) {
+    prefs(context).edit().putString("language", tag).apply()
+  }
+
   fun updateMode(context: Context): UpdateMode {
     val raw = prefs(context).getString("update_mode", null)
       ?: return UpdateMode.WIFI_ONLY

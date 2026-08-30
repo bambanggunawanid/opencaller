@@ -24,10 +24,10 @@ object Notifier {
     nm.createNotificationChannel(
       NotificationChannel(
         CHANNEL,
-        "Call warnings",
+        L10n.str(context, R.string.notif_channel_name),
         NotificationManager.IMPORTANCE_HIGH,
       ).apply {
-        description = "Why a call was flagged, silenced, or blocked"
+        description = L10n.str(context, R.string.notif_channel_desc)
       },
     )
   }
@@ -37,19 +37,19 @@ object Notifier {
     number: String,
     action: Prefs.Action,
     detail: String,
-    what: String = "call",
+    what: String? = null,
   ) {
     val nm = NotificationManagerCompat.from(context)
     if (!nm.areNotificationsEnabled()) return
     ensureChannel(context)
 
-    val callWord = what
+    val callWord = what ?: L10n.str(context, R.string.what_call)
     val title = when (action) {
-      Prefs.Action.REJECT -> "Blocked $callWord"
-      Prefs.Action.SILENCE -> "Silenced suspicious $callWord"
-      Prefs.Action.ALLOW -> "⚠ Suspicious $callWord"
+      Prefs.Action.REJECT -> L10n.str(context, R.string.notif_blocked, callWord)
+      Prefs.Action.SILENCE -> L10n.str(context, R.string.notif_silenced, callWord)
+      Prefs.Action.ALLOW -> L10n.str(context, R.string.notif_suspicious, callWord)
     }
-    val body = "$number — ${friendly(detail)}"
+    val body = "$number — ${friendly(context, detail)}"
     val builder = NotificationCompat.Builder(context, CHANNEL)
       .setSmallIcon(R.drawable.ic_notification)
       .setContentTitle(title)
@@ -94,15 +94,17 @@ object Notifier {
       ?.canUseFullScreenIntent() == true
   }
 
-  fun friendly(detail: String): String {
+  fun friendly(context: Context, detail: String): String {
     val parts = detail.split(':')
     return when (parts[0]) {
-      "user-block" -> "matched your block rule"
-      "heuristic" -> "suspicious (${parts.getOrElse(1) { "?" }})"
+      "user-block" -> L10n.str(context, R.string.friendly_user_block)
+      "heuristic" ->
+        L10n.str(context, R.string.friendly_heuristic, parts.getOrElse(1) { "?" })
       else -> {
-        val category = parts[0]
+        val category = L10n.category(context, parts[0])
         val count = parts.getOrNull(1)
-        if (count != null) "$category — $count report(s)" else category
+        if (count != null) L10n.str(context, R.string.friendly_reports, category, count)
+        else category
       }
     }
   }

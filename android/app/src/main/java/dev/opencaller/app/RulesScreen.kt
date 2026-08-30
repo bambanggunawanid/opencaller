@@ -28,6 +28,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 
 /** Tab 3 — personal block/allow rules (F5). Private to this phone. */
@@ -42,12 +43,12 @@ fun RulesScreen() {
     Modifier.fillMaxSize().padding(16.dp),
     verticalArrangement = Arrangement.spacedBy(10.dp),
   ) {
-    item { Text("Your rules", style = MaterialTheme.typography.headlineMedium) }
+    item {
+      Text(stringResource(R.string.rules_title), style = MaterialTheme.typography.headlineMedium)
+    }
     item {
       Text(
-        "Rules are private to this phone. They never leave your device and " +
-          "never mark anyone in the shared database — blocking is a " +
-          "preference, not a report.",
+        stringResource(R.string.rules_privacy),
         style = MaterialTheme.typography.bodySmall,
       )
     }
@@ -57,7 +58,7 @@ fun RulesScreen() {
         OutlinedTextField(
           value = ruleInput,
           onValueChange = { ruleInput = it },
-          label = { Text("Number, sender name, or prefix (* suffix)") },
+          label = { Text(stringResource(R.string.rules_input_label)) },
           modifier = Modifier.fillMaxWidth(),
         )
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -66,13 +67,13 @@ fun RulesScreen() {
               blockRules = Prefs.blockRules(context).sorted()
               ruleInput = ""
             }
-          }) { Text("Block") }
+          }) { Text(stringResource(R.string.rules_block)) }
           OutlinedButton(onClick = {
             if (Prefs.addRule(context, block = false, ruleInput)) {
               allowRules = Prefs.allowRules(context).sorted()
               ruleInput = ""
             }
-          }) { Text("Always allow") }
+          }) { Text(stringResource(R.string.rules_allow)) }
         }
       }
     }
@@ -80,7 +81,7 @@ fun RulesScreen() {
     if (blockRules.isNotEmpty()) {
       item {
         Text(
-          "Blocked (${blockRules.size})",
+          stringResource(R.string.rules_blocked_n, blockRules.size),
           style = MaterialTheme.typography.titleMedium,
           modifier = Modifier.padding(top = 8.dp),
         )
@@ -95,7 +96,7 @@ fun RulesScreen() {
     if (allowRules.isNotEmpty()) {
       item {
         Text(
-          "Always allowed (${allowRules.size})",
+          stringResource(R.string.rules_allowed_n, allowRules.size),
           style = MaterialTheme.typography.titleMedium,
           modifier = Modifier.padding(top = 8.dp),
         )
@@ -110,11 +111,7 @@ fun RulesScreen() {
 
     item {
       Text(
-        "Heads-up: Android never sends calls from saved contacts to " +
-          "screening apps, so rules can't fire for them. For an annoying " +
-          "auto-saved number (e.g. your operator): unsave or hide it " +
-          "(Contacts → Contacts to display → uncheck SIM), or block it in " +
-          "the Phone app — the system blocklist works even for contacts.",
+        stringResource(R.string.rules_contact_note),
         style = MaterialTheme.typography.bodySmall,
         modifier = Modifier.padding(top = 8.dp),
       )
@@ -137,7 +134,7 @@ private fun RuleRow(rule: String, blocked: Boolean, onRemove: () -> Unit) {
     )
     Text(rule, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
     IconButton(onClick = onRemove) {
-      Icon(Icons.Filled.Delete, contentDescription = "Remove rule")
+      Icon(Icons.Filled.Delete, contentDescription = stringResource(R.string.rules_remove))
     }
   }
 }

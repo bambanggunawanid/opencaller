@@ -27,7 +27,7 @@ object UpdateManager {
   /** Blocking; call off the main thread. Returns a user-displayable line. */
   fun checkAndApply(context: Context): String {
     if (UPDATE_BASE_URL.isBlank()) {
-      return "Updates not configured yet (no release channel)"
+      return L10n.str(context, R.string.update_not_configured)
     }
     val results = Prefs.enabledCountries(context).map { cc ->
       "${cc.uppercase()}: ${updateCountry(context, cc)}"
@@ -50,11 +50,16 @@ object UpdateManager {
       )
       val parts = result.split('|')
       when {
-        parts[0] == "ok" -> "updated, ${parts[1]} numbers (built day ${parts[2]})"
-        else -> "refused: ${parts.getOrElse(1) { "unknown" }}"
+        parts[0] == "ok" -> {
+          val built = parts[2].toLongOrNull()
+            ?.let { java.time.LocalDate.ofEpochDay(it).toString() } ?: parts[2]
+          L10n.str(context, R.string.update_ok, parts[1], built)
+        }
+        else ->
+          L10n.str(context, R.string.update_refused, parts.getOrElse(1) { "unknown" })
       }
     } catch (e: Exception) {
-      "failed: ${e.message}"
+      L10n.str(context, R.string.update_failed, e.message ?: e.javaClass.simpleName)
     }
   }
 

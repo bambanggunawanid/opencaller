@@ -34,6 +34,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import java.text.SimpleDateFormat
 import java.time.LocalDate
@@ -82,34 +83,36 @@ fun ShieldScreen(onOpenActivity: () -> Unit) {
               modifier = Modifier.size(40.dp),
             )
             Text(
-              when {
-                active -> "Protecting your calls"
-                !roleHeld -> "Not active"
-                else -> "Database problem"
-              },
+              stringResource(
+                when {
+                  active -> R.string.shield_active
+                  !roleHeld -> R.string.shield_inactive
+                  else -> R.string.shield_db_problem
+                },
+              ),
               style = MaterialTheme.typography.headlineSmall,
             )
           }
           Text(
             if (DbManager.verified)
-              "${DbManager.entryCount()} known spam numbers on this phone, " +
-                "signature verified, built " +
-                LocalDate.ofEpochDay(DbManager.builtDays().toLong())
-            else
-              "Database signature verification FAILED — lookups disabled",
+              stringResource(
+                R.string.shield_db_ok,
+                DbManager.entryCount(),
+                LocalDate.ofEpochDay(DbManager.builtDays().toLong()).toString(),
+              )
+            else stringResource(R.string.shield_db_fail),
             style = MaterialTheme.typography.bodyMedium,
           )
           if (!roleHeld) {
             Text(
-              "Grant the call screening role so Android sends ringing calls " +
-                "to OpenCaller. Everything stays on this device.",
+              stringResource(R.string.shield_role_explain),
               style = MaterialTheme.typography.bodyMedium,
             )
             Button(onClick = {
               roleManager
                 ?.createRequestRoleIntent(RoleManager.ROLE_CALL_SCREENING)
                 ?.let { roleLauncher.launch(it) }
-            }) { Text("Enable call screening") }
+            }) { Text(stringResource(R.string.shield_enable)) }
           }
         }
       }
@@ -125,11 +128,10 @@ fun ShieldScreen(onOpenActivity: () -> Unit) {
             verticalAlignment = Alignment.CenterVertically,
           ) {
             Icon(Icons.Filled.HourglassTop, contentDescription = null)
-            Text("Expecting a call?", style = MaterialTheme.typography.titleMedium)
+            Text(stringResource(R.string.pause_title), style = MaterialTheme.typography.titleMedium)
           }
           Text(
-            "Pause lets unknown numbers ring normally for 45 minutes " +
-              "(couriers, drivers). Known spammers and your rules stay blocked.",
+            stringResource(R.string.pause_body),
             style = MaterialTheme.typography.bodySmall,
           )
           OutlinedButton(onClick = {
@@ -138,8 +140,11 @@ fun ShieldScreen(onOpenActivity: () -> Unit) {
           }) {
             Text(
               if (pausedUntil > now)
-                "Paused until ${SimpleDateFormat("HH:mm").format(pausedUntil)} — tap to resume"
-              else "Pause for 45 minutes",
+                stringResource(
+                  R.string.pause_until,
+                  SimpleDateFormat("HH:mm").format(pausedUntil),
+                )
+              else stringResource(R.string.pause_start),
             )
           }
         }
@@ -151,18 +156,24 @@ fun ShieldScreen(onOpenActivity: () -> Unit) {
       var result by remember { mutableStateOf<String?>(null) }
       OutlinedCard(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-          Text("Check a number", style = MaterialTheme.typography.titleMedium)
+          Text(stringResource(R.string.lookup_title), style = MaterialTheme.typography.titleMedium)
           OutlinedTextField(
             value = query,
             onValueChange = { query = it },
-            label = { Text("Phone number") },
+            label = { Text(stringResource(R.string.lookup_label)) },
             modifier = Modifier.fillMaxWidth(),
           )
           Button(onClick = {
             val hit = DbManager.lookup(context, query)
-            result = if (hit == null) "$query — not in the database"
-            else "$query — ${hit.category}, ${hit.reportCount} report(s)"
-          }) { Text("Look up") }
+            result = if (hit == null) L10n.str(context, R.string.lookup_miss, query)
+            else L10n.str(
+              context,
+              R.string.lookup_hit,
+              query,
+              L10n.category(context, hit.category),
+              hit.reportCount,
+            )
+          }) { Text(stringResource(R.string.lookup_button)) }
           result?.let { Text(it, style = MaterialTheme.typography.bodyLarge) }
         }
       }
@@ -175,8 +186,8 @@ fun ShieldScreen(onOpenActivity: () -> Unit) {
           horizontalArrangement = Arrangement.SpaceBetween,
           verticalAlignment = Alignment.CenterVertically,
         ) {
-          Text("Recent", style = MaterialTheme.typography.titleMedium)
-          TextButton(onClick = onOpenActivity) { Text("See all") }
+          Text(stringResource(R.string.recent_title), style = MaterialTheme.typography.titleMedium)
+          TextButton(onClick = onOpenActivity) { Text(stringResource(R.string.recent_see_all)) }
         }
       }
       items(events.take(3).size) { i -> EventRow(events[i]) }

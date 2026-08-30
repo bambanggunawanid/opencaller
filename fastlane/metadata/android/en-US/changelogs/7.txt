@@ -1,0 +1,4 @@
+Language setting: choose System, English, or Bahasa Indonesia in
+Settings. The whole app is translated — every screen, plus call
+warnings, overlays, and full-screen alerts. Database update status now
+shows the build date as a real date.

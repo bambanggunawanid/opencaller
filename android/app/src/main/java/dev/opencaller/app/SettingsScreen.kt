@@ -1,5 +1,6 @@
 package dev.opencaller.app
 
+import android.app.Activity
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
@@ -35,6 +36,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
@@ -66,22 +68,30 @@ fun SettingsScreen() {
     Modifier.fillMaxSize().padding(16.dp),
     verticalArrangement = Arrangement.spacedBy(10.dp),
   ) {
-    item { Text("Settings", style = MaterialTheme.typography.headlineMedium) }
-
-    // ---- Protection ----
-    item { SectionHeader("What to do with flagged calls") }
-    items(count = ACTION_CATEGORIES.size) { i ->
-      val (category, label) = ACTION_CATEGORIES[i]
-      ActionSelector(category, label)
+    item {
+      Text(
+        stringResource(R.string.settings_title),
+        style = MaterialTheme.typography.headlineMedium,
+      )
     }
 
-    item { SectionHeader("Unknown callers") }
+    // ---- Language ----
+    item { SectionHeader(stringResource(R.string.section_language)) }
+    item { LanguagePicker() }
+
+    // ---- Protection ----
+    item { SectionHeader(stringResource(R.string.section_actions)) }
+    items(count = ACTION_CATEGORIES.size) { i ->
+      val (category, labelRes) = ACTION_CATEGORIES[i]
+      ActionSelector(category, stringResource(labelRes))
+    }
+
+    item { SectionHeader(stringResource(R.string.section_unknown)) }
     item {
       var silenceUnknown by remember { mutableStateOf(Prefs.silenceUnknown(context)) }
       SwitchRow(
-        "Silence all unknown numbers",
-        "Calls from numbers not in your contacts ring silently. " +
-          "Use the Shield tab's pause when you expect a courier.",
+        stringResource(R.string.silence_unknown_title),
+        stringResource(R.string.silence_unknown_sub),
         silenceUnknown,
       ) {
         silenceUnknown = it
@@ -91,12 +101,8 @@ fun SettingsScreen() {
     item {
       var wangiri by remember { mutableStateOf(Prefs.wangiriEnabled(context)) }
       SwitchRow(
-        "Learn from missed calls",
-        "Rotating spammers can't hide their SIM batch: when unknown " +
-          "numbers ring briefly and hang up, their whole number block is " +
-          "silenced locally for 48h (two strikes needed — one missed " +
-          "courier call is never enough). Learned on this phone only; " +
-          "needs notification access.",
+        stringResource(R.string.wangiri_title),
+        stringResource(R.string.wangiri_sub),
         wangiri,
       ) {
         wangiri = it
@@ -112,24 +118,24 @@ fun SettingsScreen() {
             ownNumber = it
             Prefs.setOwnNumber(context, it)
           },
-          label = { Text("Your number (optional, for spoof detection)") },
+          label = { Text(stringResource(R.string.own_number_label)) },
           modifier = Modifier.fillMaxWidth(),
         )
         Text(
-          "Used only on this device to spot calls faking your own prefix.",
+          stringResource(R.string.own_number_sub),
           style = MaterialTheme.typography.bodySmall,
         )
       }
     }
 
     // ---- Warnings ----
-    item { SectionHeader("Warnings") }
+    item { SectionHeader(stringResource(R.string.section_warnings)) }
     item { OverlaySetting(permTick) }
     item { WhatsAppSetting(permTick) }
     item { SmsSetting() }
 
     // ---- Database ----
-    item { SectionHeader("Spam database") }
+    item { SectionHeader(stringResource(R.string.section_db)) }
     item {
       var enabled by remember { mutableStateOf(Prefs.enabledCountries(context)) }
       // Re-read after toggles AND after updates (field bug: row showed the
@@ -143,9 +149,12 @@ fun SettingsScreen() {
           SwitchRow(
             title = cc.uppercase(),
             subtitle = if (info != null)
-              "${info.entries} numbers, built " +
-                LocalDate.ofEpochDay(info.builtDays.toLong())
-            else "downloads with the next update",
+              stringResource(
+                R.string.db_row_sub,
+                info.entries,
+                LocalDate.ofEpochDay(info.builtDays.toLong()).toString(),
+              )
+            else stringResource(R.string.db_row_pending),
             checked = cc in enabled,
           ) {
             Prefs.setCountryEnabled(context, cc, it)
@@ -156,9 +165,7 @@ fun SettingsScreen() {
         val sim = Prefs.simCountry(context)
         if (sim.isNotEmpty() && sim !in Prefs.AVAILABLE_SHARDS) {
           Text(
-            "No public spam data exists yet for your SIM country " +
-              "(${sim.uppercase()}) — calls there are still protected by " +
-              "spoofing/invalid-number heuristics.",
+            stringResource(R.string.db_sim_note, sim.uppercase()),
             style = MaterialTheme.typography.bodySmall,
           )
         }
@@ -167,7 +174,10 @@ fun SettingsScreen() {
     item {
       var mode by remember { mutableStateOf(Prefs.updateMode(context)) }
       Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Text("Weekly automatic updates", style = MaterialTheme.typography.bodyLarge)
+        Text(
+          stringResource(R.string.update_mode_title),
+          style = MaterialTheme.typography.bodyLarge,
+        )
         SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
           Prefs.UpdateMode.entries.forEachIndexed { i, m ->
             SegmentedButton(
@@ -183,11 +193,13 @@ fun SettingsScreen() {
               ),
             ) {
               Text(
-                when (m) {
-                  Prefs.UpdateMode.OFF -> "Off"
-                  Prefs.UpdateMode.WIFI_ONLY -> "Wi-Fi only"
-                  Prefs.UpdateMode.ANY_NETWORK -> "Any network"
-                },
+                stringResource(
+                  when (m) {
+                    Prefs.UpdateMode.OFF -> R.string.update_off
+                    Prefs.UpdateMode.WIFI_ONLY -> R.string.update_wifi
+                    Prefs.UpdateMode.ANY_NETWORK -> R.string.update_any
+                  },
+                ),
               )
             }
           }
@@ -196,13 +208,14 @@ fun SettingsScreen() {
     }
     item {
       Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        val checking = stringResource(R.string.update_checking)
         Button(onClick = {
-          updateStatus = "Checking…"
+          updateStatus = checking
           Thread {
             val msg = UpdateManager.checkAndApply(context)
             (context as? ComponentActivity)?.runOnUiThread { updateStatus = msg }
           }.start()
-        }) { Text("Check for database update") }
+        }) { Text(stringResource(R.string.update_check)) }
         updateStatus?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
       }
     }
@@ -214,8 +227,7 @@ fun SettingsScreen() {
 
     item {
       Text(
-        "OpenCaller ${BuildConfig.VERSION_NAME} — free, open source, and " +
-          "fully offline. No account, no ads, no data leaves your phone.",
+        stringResource(R.string.about_line, BuildConfig.VERSION_NAME),
         style = MaterialTheme.typography.bodySmall,
         modifier = Modifier.padding(top = 16.dp),
       )
@@ -223,16 +235,46 @@ fun SettingsScreen() {
   }
 }
 
-private val ACTION_CATEGORIES: List<Pair<String, String>> = listOf(
-  "scam" to "Scam",
-  "robocall" to "Robocall",
-  "telemarketing" to "Telemarketing",
-  "debt-collection" to "Debt collection",
-  "survey" to "Survey",
-  "other" to "Other reports",
-  "sms-spam" to "SMS spam",
-  Prefs.HEURISTIC to "Suspicious (spoofed/invalid)",
+private val ACTION_CATEGORIES: List<Pair<String, Int>> = listOf(
+  "scam" to R.string.cat_scam,
+  "robocall" to R.string.cat_robocall,
+  "telemarketing" to R.string.cat_telemarketing,
+  "debt-collection" to R.string.cat_debt,
+  "survey" to R.string.cat_survey,
+  "other" to R.string.cat_other,
+  "sms-spam" to R.string.cat_sms_spam,
+  Prefs.HEURISTIC to R.string.cat_suspicious,
 )
+
+@Composable
+private fun LanguagePicker() {
+  val context = LocalContext.current
+  var lang by remember { mutableStateOf(Prefs.language(context)) }
+  SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+    L10n.CHOICES.forEachIndexed { i, tag ->
+      SegmentedButton(
+        selected = lang == tag,
+        onClick = {
+          if (lang != tag) {
+            lang = tag
+            Prefs.setLanguage(context, tag)
+            // Strings resolve at activity creation — rebuild in place.
+            (context as? Activity)?.recreate()
+          }
+        },
+        shape = SegmentedButtonDefaults.itemShape(index = i, count = L10n.CHOICES.size),
+      ) {
+        Text(
+          when (tag) {
+            "" -> stringResource(R.string.lang_system)
+            "en" -> "English"
+            else -> "Indonesia"
+          },
+        )
+      }
+    }
+  }
+}
 
 @Composable
 private fun SectionHeader(text: String) {
@@ -289,11 +331,13 @@ private fun ActionSelector(category: String, label: String) {
           ),
         ) {
           Text(
-            when (a) {
-              Prefs.Action.ALLOW -> "Allow"
-              Prefs.Action.SILENCE -> "Silence"
-              Prefs.Action.REJECT -> "Block"
-            },
+            stringResource(
+              when (a) {
+                Prefs.Action.ALLOW -> R.string.action_allow
+                Prefs.Action.SILENCE -> R.string.action_silence
+                Prefs.Action.REJECT -> R.string.action_reject
+              },
+            ),
           )
         }
       }
@@ -316,12 +360,8 @@ private fun OverlaySetting(permTick: Int) {
   }
   Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
     SwitchRow(
-      "Large on-screen spam badge",
-      "Shows a big red warning card over the screen while a flagged call " +
-        "rings (also for WhatsApp/SMS warnings). Needs the 'Display over " +
-        "other apps' / 'Appear on top' permission — used only to draw this " +
-        "card; tap it to dismiss. When the screen is off or locked, the " +
-        "warning lights the screen as a full-screen alert instead.",
+      stringResource(R.string.badge_title),
+      stringResource(R.string.badge_sub),
       checked = overlayPref && overlayGranted,
     ) { wantOn ->
       if (wantOn) {
@@ -335,11 +375,11 @@ private fun OverlaySetting(permTick: Int) {
     }
     if (overlayPref && !overlayGranted) {
       Text(
-        "Permission not granted yet — the badge cannot appear.",
+        stringResource(R.string.badge_not_granted),
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.error,
       )
-      TextButton(onClick = grantIntent) { Text("Grant 'Appear on top'") }
+      TextButton(onClick = grantIntent) { Text(stringResource(R.string.badge_grant)) }
     }
     if (Build.VERSION.SDK_INT >= 34 &&
       overlayPref && !Notifier.canUseFullScreen(context)
@@ -351,7 +391,7 @@ private fun OverlaySetting(permTick: Int) {
             Uri.parse("package:${context.packageName}"),
           ),
         )
-      }) { Text("Allow full-screen alerts (screen-off warnings)") }
+      }) { Text(stringResource(R.string.badge_fullscreen)) }
     }
   }
 }
@@ -371,21 +411,16 @@ private fun WhatsAppSetting(permTick: Int) {
       verticalAlignment = Alignment.CenterVertically,
     ) {
       Text(
-        "WhatsApp call warnings",
+        stringResource(R.string.wa_title),
         style = MaterialTheme.typography.bodyLarge,
         modifier = Modifier.weight(1f),
       )
       TextButton(onClick = {
         context.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
-      }) { Text(if (listenerOn) "On — manage" else "Off — enable") }
+      }) { Text(stringResource(if (listenerOn) R.string.wa_on else R.string.wa_off)) }
     }
     Text(
-      "Optional: warns when a reported number calls you on WhatsApp. " +
-        "Uses Android's notification access — a broad permission; " +
-        "OpenCaller only reads WhatsApp incoming-call notifications " +
-        "(open source, verifiable) and still works fully offline. " +
-        "Warn-only: Android does not allow blocking VoIP calls. " +
-        "Tip: WhatsApp Settings → Privacy → Calls can silence unknown callers.",
+      stringResource(R.string.wa_sub),
       style = MaterialTheme.typography.bodySmall,
     )
   }
@@ -396,7 +431,7 @@ private fun SmsSetting() {
   val context = LocalContext.current
   var smsMode by remember { mutableStateOf(Prefs.smsMode(context)) }
   Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-    Text("SMS spam protection", style = MaterialTheme.typography.bodyLarge)
+    Text(stringResource(R.string.sms_title), style = MaterialTheme.typography.bodyLarge)
     SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
       Prefs.SmsMode.entries.forEachIndexed { i, m ->
         SegmentedButton(
@@ -411,25 +446,19 @@ private fun SmsSetting() {
           ),
         ) {
           Text(
-            when (m) {
-              Prefs.SmsMode.OFF -> "Off"
-              Prefs.SmsMode.WARN -> "Warn"
-              Prefs.SmsMode.MUTE -> "Mute"
-            },
+            stringResource(
+              when (m) {
+                Prefs.SmsMode.OFF -> R.string.sms_off
+                Prefs.SmsMode.WARN -> R.string.sms_warn
+                Prefs.SmsMode.MUTE -> R.string.sms_mute
+              },
+            ),
           )
         }
       }
     }
     Text(
-      "Optional, uses the same notification access. WARN adds a banner " +
-        "next to spam texts. MUTE silences the notification for senders " +
-        "in your block rules or reported for SMS spam — the message " +
-        "still arrives in your inbox, just without the buzz. Only " +
-        "sender info from your SMS app's notifications is read, " +
-        "locally. True SMS blocking would require replacing your " +
-        "messaging app — the trade we refuse. " +
-        "Tip: block gateway senders by name, e.g. add a rule " +
-        "\"IM3 Promo\" or \"3Untukmu\".",
+      stringResource(R.string.sms_sub),
       style = MaterialTheme.typography.bodySmall,
     )
   }
@@ -438,6 +467,7 @@ private fun SmsSetting() {
 @Composable
 private fun DebugTools() {
   val context = LocalContext.current
+  // Debug-only surface — deliberately not translated.
   // WhatsApp-style CATEGORY_CALL notifications from our own package (debug
   // builds watch it), exercising the full listener pipeline with numbers
   // known to the DB.

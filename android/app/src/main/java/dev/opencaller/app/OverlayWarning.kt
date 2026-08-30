@@ -94,7 +94,7 @@ object OverlayWarning {
       setPadding(0, dp(4), 0, 0)
     })
     card.addView(TextView(context).apply {
-      text = "OpenCaller • tap to dismiss"
+      text = L10n.str(context, R.string.overlay_footer)
       setTextColor(0xCCFFFFFF.toInt())
       textSize = 12f
       setPadding(0, dp(8), 0, 0)

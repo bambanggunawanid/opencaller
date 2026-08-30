@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string name="app_name" translatable="false">OpenCaller</string>
+  <string name="listener_service_label">OpenCaller WhatsApp call warnings</string>
+
+  <!-- Bottom navigation -->
+  <string name="tab_shield">Shield</string>
+  <string name="tab_activity">Activity</string>
+  <string name="tab_rules">Rules</string>
+  <string name="tab_settings">Settings</string>
+
+  <!-- Shield tab -->
+  <string name="shield_active">Protecting your calls</string>
+  <string name="shield_inactive">Not active</string>
+  <string name="shield_db_problem">Database problem</string>
+  <string name="shield_db_ok">%1$d known spam numbers on this phone, signature verified, built %2$s</string>
+  <string name="shield_db_fail">Database signature verification FAILED — lookups disabled</string>
+  <string name="shield_role_explain">Grant the call screening role so Android sends ringing calls to OpenCaller. Everything stays on this device.</string>
+  <string name="shield_enable">Enable call screening</string>
+  <string name="pause_title">Expecting a call?</string>
+  <string name="pause_body">Pause lets unknown numbers ring normally for 45 minutes (couriers, drivers). Known spammers and your rules stay blocked.</string>
+  <string name="pause_until">Paused until %1$s — tap to resume</string>
+  <string name="pause_start">Pause for 45 minutes</string>
+  <string name="lookup_title">Check a number</string>
+  <string name="lookup_label">Phone number</string>
+  <string name="lookup_button">Look up</string>
+  <string name="lookup_miss">%1$s — not in the database</string>
+  <string name="lookup_hit">%1$s — %2$s, %3$d report(s)</string>
+  <string name="recent_title">Recent</string>
+  <string name="recent_see_all">See all</string>
+
+  <!-- Activity tab -->
+  <string name="activity_title">Activity</string>
+  <string name="activity_subtitle">Everything OpenCaller did, newest first. This history lives only on this phone.</string>
+  <string name="activity_empty">Nothing screened yet — this fills up as calls and messages come in.</string>
+  <string name="ev_blocked">Blocked</string>
+  <string name="ev_silenced">Silenced</string>
+  <string name="ev_muted_sms">Muted SMS</string>
+  <string name="ev_warned">Warned (%1$s)</string>
+  <string name="ev_flagged_allowed">Flagged, rang through</string>
+  <string name="ev_learned">Missed-call pattern noted</string>
+  <string name="ev_learned_detail">strike %1$s for this number block</string>
+  <string name="ev_unknown">Unknown caller, allowed</string>
+
+  <!-- Verdict phrasing + spam categories (DB slugs stay English) -->
+  <string name="friendly_user_block">matched your block rule</string>
+  <string name="friendly_heuristic">suspicious (%1$s)</string>
+  <string name="friendly_reports">%1$s — %2$s report(s)</string>
+  <string name="cat_scam">Scam</string>
+  <string name="cat_robocall">Robocall</string>
+  <string name="cat_telemarketing">Telemarketing</string>
+  <string name="cat_debt">Debt collection</string>
+  <string name="cat_survey">Survey</string>
+  <string name="cat_other">Other reports</string>
+  <string name="cat_sms_spam">SMS spam</string>
+  <string name="cat_suspicious">Suspicious (spoofed/invalid)</string>
+
+  <!-- Notifications / overlays. what_* is substituted into the titles, so
+       each language controls its own casing and word order. -->
+  <string name="what_call">call</string>
+  <string name="what_app_call">%1$s call</string>
+  <string name="what_sms">text message</string>
+  <string name="notif_channel_name">Call warnings</string>
+  <string name="notif_channel_desc">Why a call was flagged, silenced, or blocked</string>
+  <string name="notif_blocked">Blocked %1$s</string>
+  <string name="notif_silenced">Silenced suspicious %1$s</string>
+  <string name="notif_suspicious">⚠ Suspicious %1$s</string>
+  <string name="overlay_spam_silenced">⚠ Spam call silenced</string>
+  <string name="overlay_suspicious_call">⚠ Suspicious call</string>
+  <string name="overlay_footer">OpenCaller • tap to dismiss</string>
+  <string name="warning_footer">OpenCaller • tap anywhere to dismiss</string>
+
+  <!-- Database updates -->
+  <string name="update_checking">Checking…</string>
+  <string name="update_ok">updated, %1$s numbers (built %2$s)</string>
+  <string name="update_refused">refused: %1$s</string>
+  <string name="update_failed">failed: %1$s</string>
+  <string name="update_not_configured">Updates not configured yet (no release channel)</string>
+
+  <!-- Rules tab -->
+  <string name="rules_title">Your rules</string>
+  <string name="rules_privacy">Rules are private to this phone. They never leave your device and never mark anyone in the shared database — blocking is a preference, not a report.</string>
+  <string name="rules_input_label">Number, sender name, or prefix (* suffix)</string>
+  <string name="rules_block">Block</string>
+  <string name="rules_allow">Always allow</string>
+  <string name="rules_blocked_n">Blocked (%1$d)</string>
+  <string name="rules_allowed_n">Always allowed (%1$d)</string>
+  <string name="rules_contact_note">Heads-up: Android never sends calls from saved contacts to screening apps, so rules can\'t fire for them. For an annoying auto-saved number (e.g. your operator): unsave or hide it (Contacts → Contacts to display → uncheck SIM), or block it in the Phone app — the system blocklist works even for contacts.</string>
+  <string name="rules_remove">Remove rule</string>
+
+  <!-- Settings tab -->
+  <string name="settings_title">Settings</string>
+  <string name="section_language">Language / Bahasa</string>
+  <string name="lang_system">System</string>
+  <string name="section_actions">What to do with flagged calls</string>
+  <string name="action_allow">Allow</string>
+  <string name="action_silence">Silence</string>
+  <string name="action_reject">Block</string>
+  <string name="section_unknown">Unknown callers</string>
+  <string name="silence_unknown_title">Silence all unknown numbers</string>
+  <string name="silence_unknown_sub">Calls from numbers not in your contacts ring silently. Use the Shield tab\'s pause when you expect a courier.</string>
+  <string name="wangiri_title">Learn from missed calls</string>
+  <string name="wangiri_sub">Rotating spammers can\'t hide their SIM batch: when unknown numbers ring briefly and hang up, their whole number block is silenced locally for 48h (two strikes needed — one missed courier call is never enough). Learned on this phone only; needs notification access.</string>
+  <string name="own_number_label">Your number (optional, for spoof detection)</string>
+  <string name="own_number_sub">Used only on this device to spot calls faking your own prefix.</string>
+  <string name="section_warnings">Warnings</string>
+  <string name="badge_title">Large on-screen spam badge</string>
+  <string name="badge_sub">Shows a big red warning card over the screen while a flagged call rings (also for WhatsApp/SMS warnings). Needs the \'Display over other apps\' / \'Appear on top\' permission — used only to draw this card; tap it to dismiss. When the screen is off or locked, the warning lights the screen as a full-screen alert instead.</string>
+  <string name="badge_not_granted">Permission not granted yet — the badge cannot appear.</string>
+  <string name="badge_grant">Grant \'Appear on top\'</string>
+  <string name="badge_fullscreen">Allow full-screen alerts (screen-off warnings)</string>
+  <string name="wa_title">WhatsApp call warnings</string>
+  <string name="wa_on">On — manage</string>
+  <string name="wa_off">Off — enable</string>
+  <string name="wa_sub">Optional: warns when a reported number calls you on WhatsApp. Uses Android\'s notification access — a broad permission; OpenCaller only reads WhatsApp incoming-call notifications (open source, verifiable) and still works fully offline. Warn-only: Android does not allow blocking VoIP calls. Tip: WhatsApp Settings → Privacy → Calls can silence unknown callers.</string>
+  <string name="sms_title">SMS spam protection</string>
+  <string name="sms_off">Off</string>
+  <string name="sms_warn">Warn</string>
+  <string name="sms_mute">Mute</string>
+  <string name="sms_sub">Optional, uses the same notification access. WARN adds a banner next to spam texts. MUTE silences the notification for senders in your block rules or reported for SMS spam — the message still arrives in your inbox, just without the buzz. Only sender info from your SMS app\'s notifications is read, locally. True SMS blocking would require replacing your messaging app — the trade we refuse. Tip: block gateway senders by name, e.g. add a rule \"IM3 Promo\" or \"3Untukmu\".</string>
+  <string name="section_db">Spam database</string>
+  <string name="db_row_sub">%1$d numbers, built %2$s</string>
+  <string name="db_row_pending">downloads with the next update</string>
+  <string name="db_sim_note">No public spam data exists yet for your SIM country (%1$s) — calls there are still protected by spoofing/invalid-number heuristics.</string>
+  <string name="update_mode_title">Weekly automatic updates</string>
+  <string name="update_off">Off</string>
+  <string name="update_wifi">Wi-Fi only</string>
+  <string name="update_any">Any network</string>
+  <string name="update_check">Check for database update</string>
+  <string name="about_line">OpenCaller %1$s — free, open source, and fully offline. No account, no ads, no data leaves your phone.</string>
+</resources>

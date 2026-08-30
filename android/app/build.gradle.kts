@@ -23,8 +23,8 @@ android {
     // CallScreeningService role exists since API 29 (Android 10) — PRD §7.
     minSdk = 29
     targetSdk = 35
-    versionCode = 6
-    versionName = "0.4.0"
+    versionCode = 7
+    versionName = "0.5.0"
 
     // Only ABIs we cross-compile the Rust core for (cargo ndk -t ...);
     // shipping other ABIs would crash on loadLibrary.

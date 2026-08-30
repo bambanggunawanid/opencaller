@@ -74,8 +74,12 @@ class ScreeningService : CallScreeningService() {
       if (action != Prefs.Action.REJECT) {
         OverlayWarning.show(
           this,
-          if (action == Prefs.Action.SILENCE) "⚠ Spam call silenced" else "⚠ Suspicious call",
-          "$number — ${Notifier.friendly(detail)}",
+          L10n.str(
+            this,
+            if (action == Prefs.Action.SILENCE) R.string.overlay_spam_silenced
+            else R.string.overlay_suspicious_call,
+          ),
+          "$number — ${Notifier.friendly(this, detail)}",
         )
       }
     }

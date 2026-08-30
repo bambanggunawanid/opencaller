@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string name="listener_service_label">Peringatan panggilan WhatsApp OpenCaller</string>
+
+  <!-- Navigasi bawah -->
+  <string name="tab_shield">Perisai</string>
+  <string name="tab_activity">Aktivitas</string>
+  <string name="tab_rules">Aturan</string>
+  <string name="tab_settings">Setelan</string>
+
+  <!-- Tab Perisai -->
+  <string name="shield_active">Melindungi panggilan Anda</string>
+  <string name="shield_inactive">Tidak aktif</string>
+  <string name="shield_db_problem">Masalah database</string>
+  <string name="shield_db_ok">%1$d nomor spam dikenal di ponsel ini, tanda tangan terverifikasi, dibuat %2$s</string>
+  <string name="shield_db_fail">Verifikasi tanda tangan database GAGAL — pencarian dinonaktifkan</string>
+  <string name="shield_role_explain">Berikan peran penyaring panggilan agar Android mengirim panggilan masuk ke OpenCaller. Semuanya tetap di perangkat ini.</string>
+  <string name="shield_enable">Aktifkan penyaringan panggilan</string>
+  <string name="pause_title">Menunggu panggilan?</string>
+  <string name="pause_body">Jeda membiarkan nomor tak dikenal berdering normal selama 45 menit (kurir, driver). Spammer yang dikenal dan aturan Anda tetap diblokir.</string>
+  <string name="pause_until">Dijeda sampai %1$s — ketuk untuk melanjutkan</string>
+  <string name="pause_start">Jeda 45 menit</string>
+  <string name="lookup_title">Periksa nomor</string>
+  <string name="lookup_label">Nomor telepon</string>
+  <string name="lookup_button">Cari</string>
+  <string name="lookup_miss">%1$s — tidak ada di database</string>
+  <string name="lookup_hit">%1$s — %2$s, %3$d laporan</string>
+  <string name="recent_title">Terbaru</string>
+  <string name="recent_see_all">Lihat semua</string>
+
+  <!-- Tab Aktivitas -->
+  <string name="activity_title">Aktivitas</string>
+  <string name="activity_subtitle">Semua yang dilakukan OpenCaller, terbaru di atas. Riwayat ini hanya tersimpan di ponsel ini.</string>
+  <string name="activity_empty">Belum ada yang disaring — daftar ini terisi saat panggilan dan pesan masuk.</string>
+  <string name="ev_blocked">Diblokir</string>
+  <string name="ev_silenced">Disenyapkan</string>
+  <string name="ev_muted_sms">SMS dibisukan</string>
+  <string name="ev_warned">Diperingatkan (%1$s)</string>
+  <string name="ev_flagged_allowed">Ditandai, tetap berdering</string>
+  <string name="ev_learned">Pola panggilan tak terjawab dicatat</string>
+  <string name="ev_learned_detail">strike %1$s untuk blok nomor ini</string>
+  <string name="ev_unknown">Penelepon tak dikenal, diizinkan</string>
+
+  <!-- Frasa vonis + kategori spam -->
+  <string name="friendly_user_block">cocok dengan aturan blokir Anda</string>
+  <string name="friendly_heuristic">mencurigakan (%1$s)</string>
+  <string name="friendly_reports">%1$s — %2$s laporan</string>
+  <string name="cat_scam">Penipuan</string>
+  <string name="cat_robocall">Robocall</string>
+  <string name="cat_telemarketing">Telemarketing</string>
+  <string name="cat_debt">Penagihan utang</string>
+  <string name="cat_survey">Survei</string>
+  <string name="cat_other">Laporan lain</string>
+  <string name="cat_sms_spam">Spam SMS</string>
+  <string name="cat_suspicious">Mencurigakan (dipalsukan/tidak valid)</string>
+
+  <!-- Notifikasi / kartu peringatan -->
+  <string name="what_call">Panggilan</string>
+  <string name="what_app_call">Panggilan %1$s</string>
+  <string name="what_sms">Pesan SMS</string>
+  <string name="notif_channel_name">Peringatan panggilan</string>
+  <string name="notif_channel_desc">Alasan panggilan ditandai, disenyapkan, atau diblokir</string>
+  <string name="notif_blocked">%1$s diblokir</string>
+  <string name="notif_silenced">%1$s mencurigakan disenyapkan</string>
+  <string name="notif_suspicious">⚠ %1$s mencurigakan</string>
+  <string name="overlay_spam_silenced">⚠ Panggilan spam disenyapkan</string>
+  <string name="overlay_suspicious_call">⚠ Panggilan mencurigakan</string>
+  <string name="overlay_footer">OpenCaller • ketuk untuk menutup</string>
+  <string name="warning_footer">OpenCaller • ketuk di mana saja untuk menutup</string>
+
+  <!-- Pembaruan database -->
+  <string name="update_checking">Memeriksa…</string>
+  <string name="update_ok">diperbarui, %1$s nomor (dibuat %2$s)</string>
+  <string name="update_refused">ditolak: %1$s</string>
+  <string name="update_failed">gagal: %1$s</string>
+  <string name="update_not_configured">Pembaruan belum dikonfigurasi (belum ada kanal rilis)</string>
+
+  <!-- Tab Aturan -->
+  <string name="rules_title">Aturan Anda</string>
+  <string name="rules_privacy">Aturan bersifat pribadi di ponsel ini. Aturan tidak pernah meninggalkan perangkat dan tidak pernah menandai siapa pun di database bersama — memblokir adalah preferensi, bukan laporan.</string>
+  <string name="rules_input_label">Nomor, nama pengirim, atau awalan (akhiri dengan *)</string>
+  <string name="rules_block">Blokir</string>
+  <string name="rules_allow">Selalu izinkan</string>
+  <string name="rules_blocked_n">Diblokir (%1$d)</string>
+  <string name="rules_allowed_n">Selalu diizinkan (%1$d)</string>
+  <string name="rules_contact_note">Perhatian: Android tidak pernah mengirim panggilan dari kontak tersimpan ke aplikasi penyaring, jadi aturan tidak berlaku untuk mereka. Untuk nomor tersimpan otomatis yang mengganggu (mis. operator Anda): hapus dari kontak atau sembunyikan (Kontak → Kontak yang ditampilkan → hapus centang SIM), atau blokir di aplikasi Telepon — daftar blokir sistem berlaku bahkan untuk kontak.</string>
+  <string name="rules_remove">Hapus aturan</string>
+
+  <!-- Tab Setelan -->
+  <string name="settings_title">Setelan</string>
+  <string name="section_language">Bahasa / Language</string>
+  <string name="lang_system">Sistem</string>
+  <string name="section_actions">Tindakan untuk panggilan yang ditandai</string>
+  <string name="action_allow">Izinkan</string>
+  <string name="action_silence">Senyapkan</string>
+  <string name="action_reject">Blokir</string>
+  <string name="section_unknown">Penelepon tak dikenal</string>
+  <string name="silence_unknown_title">Senyapkan semua nomor tak dikenal</string>
+  <string name="silence_unknown_sub">Panggilan dari nomor di luar kontak berdering tanpa suara. Gunakan jeda di tab Perisai saat menunggu kurir.</string>
+  <string name="wangiri_title">Belajar dari panggilan tak terjawab</string>
+  <string name="wangiri_sub">Spammer yang gonta-ganti nomor tidak bisa menyembunyikan batch SIM-nya: saat nomor tak dikenal berdering sebentar lalu menutup, seluruh blok nomornya disenyapkan secara lokal selama 48 jam (perlu dua strike — satu panggilan kurir yang terlewat tidak pernah cukup). Dipelajari hanya di ponsel ini; perlu akses notifikasi.</string>
+  <string name="own_number_label">Nomor Anda (opsional, untuk deteksi pemalsuan)</string>
+  <string name="own_number_sub">Dipakai hanya di perangkat ini untuk mengenali panggilan yang memalsukan awalan nomor Anda.</string>
+  <string name="section_warnings">Peringatan</string>
+  <string name="badge_title">Kartu peringatan besar di layar</string>
+  <string name="badge_sub">Menampilkan kartu peringatan merah besar di atas layar saat panggilan yang ditandai berdering (juga untuk peringatan WhatsApp/SMS). Perlu izin \'Tampil di atas\' — hanya dipakai untuk menggambar kartu ini; ketuk untuk menutup. Saat layar mati atau terkunci, peringatan menyalakan layar sebagai peringatan layar penuh.</string>
+  <string name="badge_not_granted">Izin belum diberikan — kartu tidak bisa muncul.</string>
+  <string name="badge_grant">Beri izin \'Tampil di atas\'</string>
+  <string name="badge_fullscreen">Izinkan peringatan layar penuh (saat layar mati)</string>
+  <string name="wa_title">Peringatan panggilan WhatsApp</string>
+  <string name="wa_on">Aktif — kelola</string>
+  <string name="wa_off">Nonaktif — aktifkan</string>
+  <string name="wa_sub">Opsional: memperingatkan saat nomor yang dilaporkan menelepon Anda lewat WhatsApp. Memakai akses notifikasi Android — izin yang luas; OpenCaller hanya membaca notifikasi panggilan masuk WhatsApp (open source, bisa diverifikasi) dan tetap sepenuhnya offline. Hanya peringatan: Android tidak mengizinkan pemblokiran panggilan VoIP. Tips: Setelan WhatsApp → Privasi → Panggilan bisa menyenyapkan penelepon tak dikenal.</string>
+  <string name="sms_title">Perlindungan spam SMS</string>
+  <string name="sms_off">Nonaktif</string>
+  <string name="sms_warn">Peringatkan</string>
+  <string name="sms_mute">Bisukan</string>
+  <string name="sms_sub">Opsional, memakai akses notifikasi yang sama. PERINGATKAN menambah spanduk di samping SMS spam. BISUKAN menyenyapkan notifikasi untuk pengirim di aturan blokir Anda atau yang dilaporkan sebagai spam SMS — pesan tetap masuk ke kotak masuk, hanya tanpa dering. Yang dibaca hanya info pengirim dari notifikasi aplikasi SMS Anda, secara lokal. Pemblokiran SMS sungguhan mengharuskan mengganti aplikasi pesan Anda — kompromi yang kami tolak. Tips: blokir pengirim gateway berdasarkan nama, mis. tambahkan aturan \"IM3 Promo\" atau \"3Untukmu\".</string>
+  <string name="section_db">Database spam</string>
+  <string name="db_row_sub">%1$d nomor, dibuat %2$s</string>
+  <string name="db_row_pending">diunduh pada pembaruan berikutnya</string>
+  <string name="db_sim_note">Belum ada data spam publik untuk negara SIM Anda (%1$s) — panggilan di sana tetap dilindungi heuristik pemalsuan/nomor tidak valid.</string>
+  <string name="update_mode_title">Pembaruan otomatis mingguan</string>
+  <string name="update_off">Nonaktif</string>
+  <string name="update_wifi">Hanya Wi-Fi</string>
+  <string name="update_any">Jaringan apa pun</string>
+  <string name="update_check">Periksa pembaruan database</string>
+  <string name="about_line">OpenCaller %1$s — gratis, open source, dan sepenuhnya offline. Tanpa akun, tanpa iklan, tanpa data keluar dari ponsel Anda.</string>
+</resources>

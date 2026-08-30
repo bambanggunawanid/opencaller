@@ -25,6 +25,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import java.time.Instant
 import java.time.LocalDate
@@ -41,18 +42,22 @@ fun ActivityScreen() {
     Modifier.fillMaxSize().padding(16.dp),
     verticalArrangement = Arrangement.spacedBy(10.dp),
   ) {
-    item { Text("Activity", style = MaterialTheme.typography.headlineMedium) }
     item {
       Text(
-        "Everything OpenCaller did, newest first. This history lives only " +
-          "on this phone.",
+        stringResource(R.string.activity_title),
+        style = MaterialTheme.typography.headlineMedium,
+      )
+    }
+    item {
+      Text(
+        stringResource(R.string.activity_subtitle),
         style = MaterialTheme.typography.bodySmall,
       )
     }
     if (events.isEmpty()) {
       item {
         Text(
-          "Nothing screened yet — this fills up as calls and messages come in.",
+          stringResource(R.string.activity_empty),
           style = MaterialTheme.typography.bodyMedium,
           modifier = Modifier.padding(top = 24.dp),
         )
@@ -73,33 +78,39 @@ private class EventUi(
  * Decode the pipe-file verdict vocabulary (ScreeningService +
  * CallNotificationListener) into icon/label/detail.
  */
-private fun eventUi(verdict: String): EventUi {
+private fun eventUi(context: android.content.Context, verdict: String): EventUi {
   val parts = verdict.split(':')
   fun rest(from: Int) = parts.drop(from).joinToString(":")
-    .takeIf { it.isNotEmpty() }?.let { Notifier.friendly(it) }
+    .takeIf { it.isNotEmpty() }?.let { Notifier.friendly(context, it) }
+  fun s(resId: Int, vararg args: Any) = L10n.str(context, resId, *args)
   return when (parts[0]) {
-    "reject" -> EventUi(Icons.Filled.Block, "Blocked", rest(1), alert = true)
-    "silence" -> EventUi(Icons.Filled.VolumeOff, "Silenced", rest(1), alert = true)
+    "reject" -> EventUi(Icons.Filled.Block, s(R.string.ev_blocked), rest(1), alert = true)
+    "silence" -> EventUi(Icons.Filled.VolumeOff, s(R.string.ev_silenced), rest(1), alert = true)
     "muted" -> EventUi(
       Icons.Filled.NotificationsOff,
-      "Muted SMS",
+      s(R.string.ev_muted_sms),
       rest(2),
       alert = true,
     )
     "warned" -> EventUi(
       Icons.Filled.Warning,
-      "Warned (${parts.getOrElse(1) { "?" }})",
+      s(R.string.ev_warned, parts.getOrElse(1) { "?" }),
       rest(2),
       alert = true,
     )
-    "allowed" -> EventUi(Icons.Filled.Warning, "Flagged, rang through", rest(1), alert = false)
-    "learned" -> EventUi(
-      Icons.Filled.Lightbulb,
-      "Missed-call pattern noted",
-      "strike ${parts.getOrElse(2) { "?" }} for this number block",
+    "allowed" -> EventUi(
+      Icons.Filled.Warning,
+      s(R.string.ev_flagged_allowed),
+      rest(1),
       alert = false,
     )
-    "unknown" -> EventUi(Icons.Filled.Call, "Unknown caller, allowed", null, alert = false)
+    "learned" -> EventUi(
+      Icons.Filled.Lightbulb,
+      s(R.string.ev_learned),
+      s(R.string.ev_learned_detail, parts.getOrElse(2) { "?" }),
+      alert = false,
+    )
+    "unknown" -> EventUi(Icons.Filled.Call, s(R.string.ev_unknown), null, alert = false)
     else -> EventUi(Icons.Filled.BugReport, verdict, null, alert = false)
   }
 }
@@ -115,7 +126,7 @@ private fun timeLabel(atMillis: Long): String {
 /** One history line; shared with the Shield tab's "Recent" preview. */
 @Composable
 fun EventRow(e: ScreenEvent) {
-  val ui = eventUi(e.verdict)
+  val ui = eventUi(LocalContext.current, e.verdict)
   Row(
     Modifier.fillMaxWidth(),
     horizontalArrangement = Arrangement.spacedBy(12.dp),
