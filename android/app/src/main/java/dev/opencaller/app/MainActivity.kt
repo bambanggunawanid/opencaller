@@ -337,13 +337,17 @@ fun HomeScreen() {
           style = MaterialTheme.typography.bodySmall,
         )
         if (BuildConfig.DEBUG) {
+          // Uses a sender that is sms-spam-category in the updated shard
+          // (208k+), so MUTE's DB path is testable after an in-app DB
+          // update. With the old bundled DB this sender is unknown — add
+          // it as a Block rule to exercise the rule-based mute instead.
           TextButton(onClick = {
             Notifier.ensureChannel(context)
             val nm = androidx.core.app.NotificationManagerCompat.from(context)
             val fake = androidx.core.app.NotificationCompat
               .Builder(context, Notifier.CHANNEL)
               .setSmallIcon(R.drawable.ic_notification)
-              .setContentTitle("+1 951-851-4805")
+              .setContentTitle("+1 410-553-5239")
               .setContentText("KAMU HOKI! You won a prize (simulated)")
               .setCategory(androidx.core.app.NotificationCompat.CATEGORY_MESSAGE)
               .build()
@@ -352,7 +356,7 @@ fun HomeScreen() {
             } catch (_: SecurityException) {
             }
             android.os.Handler(android.os.Looper.getMainLooper())
-              .postDelayed({ nm.cancel(424244) }, 3000)
+              .postDelayed({ nm.cancel(424244) }, 5000)
           }) { Text("Simulate spam SMS (debug)") }
         }
       }
