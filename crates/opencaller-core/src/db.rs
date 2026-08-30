@@ -369,6 +369,11 @@ impl SpamDb {
     } else {
       self.mmap.len()
     };
+    // Offsets come from the file; a malformed (pipeline-bug) shard must
+    // degrade to a miss on the screening hot path, never a panic.
+    if block_start > block_end || block_end > self.mmap.len() {
+      return None;
+    }
     let block = &self.mmap[block_start..block_end];
 
     // Linear delta-decode; ≤ ENTRIES_PER_BLOCK iterations, all in one or
@@ -408,6 +413,9 @@ impl SpamDb {
       } else {
         self.mmap.len()
       };
+      if start > end || end > self.mmap.len() {
+        continue;
+      }
       let block = &self.mmap[start..end];
       let mut pos = 0;
       let mut current = first;

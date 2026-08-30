@@ -161,11 +161,14 @@ object DbManager {
 
   /** Append to the app's own history file (not the system call log). */
   fun logEvent(context: Context, number: String, verdict: String) {
+    // Sender strings are attacker-controlled (SMS gateway names can be
+    // anything); keep them from breaking the pipe/line-delimited format.
+    fun clean(s: String) = s.replace('|', '/').replace('\n', ' ').replace('\r', ' ')
     val f = File(context.filesDir, HISTORY)
     val lines = (if (f.exists()) f.readLines() else emptyList())
       .takeLast(HISTORY_MAX_LINES - 1)
       .toMutableList()
-    lines.add("${System.currentTimeMillis()}|$number|$verdict")
+    lines.add("${System.currentTimeMillis()}|${clean(number)}|${clean(verdict)}")
     f.writeText(lines.joinToString("\n"))
   }
 

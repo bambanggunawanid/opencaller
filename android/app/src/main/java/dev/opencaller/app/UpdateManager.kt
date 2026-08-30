@@ -22,7 +22,7 @@ object UpdateManager {
   const val UPDATE_BASE_URL =
     "https://github.com/bambanggunawanid/opencaller/releases/latest/download"
 
-  private const val MAX_SHARD_BYTES = 256L * 1024 * 1024
+  private const val MAX_SHARD_BYTES = 64L * 1024 * 1024
 
   /** Blocking; call off the main thread. Returns a user-displayable line. */
   fun checkAndApply(context: Context): String {
@@ -64,8 +64,21 @@ object UpdateManager {
     conn.readTimeout = 60_000
     try {
       if (conn.responseCode != 200) error("HTTP ${conn.responseCode}")
-      if (conn.contentLengthLong > MAX_SHARD_BYTES) error("shard too large")
-      return conn.inputStream.use { it.readBytes() }
+      // Bounded read: Content-Length is attacker-controlled/optional
+      // (chunked responses omit it), so enforce the cap on actual bytes.
+      conn.inputStream.use { input ->
+        val out = java.io.ByteArrayOutputStream()
+        val buf = ByteArray(64 * 1024)
+        var total = 0L
+        while (true) {
+          val n = input.read(buf)
+          if (n < 0) break
+          total += n
+          if (total > MAX_SHARD_BYTES) error("download exceeds size limit")
+          out.write(buf, 0, n)
+        }
+        return out.toByteArray()
+      }
     } finally {
       conn.disconnect()
     }
