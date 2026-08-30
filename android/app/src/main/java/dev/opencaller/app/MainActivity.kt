@@ -360,14 +360,22 @@ fun HomeScreen() {
 
     item { Text("Your rules", style = MaterialTheme.typography.titleMedium) }
     item {
-      Text(
-        "Heads-up: Android never sends calls from saved contacts to " +
-          "screening apps, so rules can't fire for them. For an annoying " +
-          "auto-saved number (e.g. your operator): unsave or hide it " +
-          "(Contacts → Contacts to display → uncheck SIM), or block it in " +
-          "the Phone app — the system blocklist works even for contacts.",
-        style = MaterialTheme.typography.bodySmall,
-      )
+      Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(
+          "Rules are private to this phone. They never leave your device " +
+            "and never mark anyone in the shared database — blocking is a " +
+            "preference, not a report.",
+          style = MaterialTheme.typography.bodySmall,
+        )
+        Text(
+          "Heads-up: Android never sends calls from saved contacts to " +
+            "screening apps, so rules can't fire for them. For an annoying " +
+            "auto-saved number (e.g. your operator): unsave or hide it " +
+            "(Contacts → Contacts to display → uncheck SIM), or block it in " +
+            "the Phone app — the system blocklist works even for contacts.",
+          style = MaterialTheme.typography.bodySmall,
+        )
+      }
     }
     item {
       var ruleInput by remember { mutableStateOf("") }
