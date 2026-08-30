@@ -269,26 +269,41 @@ fun HomeScreen() {
           style = MaterialTheme.typography.bodySmall,
         )
         if (BuildConfig.DEBUG) {
-          TextButton(onClick = {
-            // Post a WhatsApp-style CATEGORY_CALL notification from our own
-            // package; debug builds watch it, so the full listener pipeline
-            // runs (parse → lookup → warn) with a number known to the DB.
+          // Both post WhatsApp-style CATEGORY_CALL notifications from our
+          // own package (debug builds watch it), exercising the full
+          // listener pipeline with numbers known to the DB.
+          val simulate = { id: Int, title: String, personTel: String? ->
             Notifier.ensureChannel(context)
             val nm = androidx.core.app.NotificationManagerCompat.from(context)
-            val fake = androidx.core.app.NotificationCompat
+            val builder = androidx.core.app.NotificationCompat
               .Builder(context, Notifier.CHANNEL)
               .setSmallIcon(R.drawable.ic_notification)
-              .setContentTitle("+1 828-300-3919")
+              .setContentTitle(title)
               .setContentText("Incoming voice call (simulated)")
               .setCategory(androidx.core.app.NotificationCompat.CATEGORY_CALL)
-              .build()
+            if (personTel != null) {
+              builder.addPerson(
+                androidx.core.app.Person.Builder()
+                  .setName(title)
+                  .setUri("tel:$personTel")
+                  .build(),
+              )
+            }
             try {
-              nm.notify(424242, fake)
+              nm.notify(id, builder.build())
             } catch (_: SecurityException) {
             }
             android.os.Handler(android.os.Looper.getMainLooper())
-              .postDelayed({ nm.cancel(424242) }, 3000)
-          }) { Text("Simulate call notification (debug)") }
+              .postDelayed({ nm.cancel(id) }, 3000)
+          }
+          TextButton(onClick = {
+            simulate(424242, "+1 828-300-3919", null)
+          }) { Text("Simulate unknown-number call (debug)") }
+          TextButton(onClick = {
+            // Saved-contact case: name in the title, number only in the
+            // Person tel: URI — tests the extras extraction path.
+            simulate(424243, "Test Contact 🐥", "+19518514805")
+          }) { Text("Simulate saved-contact call (debug)") }
         }
       }
     }

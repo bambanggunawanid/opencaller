@@ -30,12 +30,22 @@ class CallNotificationListener : NotificationListenerService() {
     val notification = sbn.notification ?: return
     if (notification.category != Notification.CATEGORY_CALL) return
 
-    // For non-contacts WhatsApp titles the caller's number; for saved
-    // contacts it's a name (no digits) — then there is nothing to check.
     val title =
-      notification.extras?.getCharSequence(Notification.EXTRA_TITLE)?.toString() ?: return
-    val digits = title.filter { it.isDigit() }
-    if (digits.length < 7) return
+      notification.extras?.getCharSequence(Notification.EXTRA_TITLE)?.toString() ?: ""
+    val digits = extractNumberDigits(notification, title)
+    if (digits == null) {
+      // Saved contact with no number in the extras — nothing to check.
+      // Debug builds leave a local breadcrumb so field testing can see
+      // exactly what this WhatsApp version attaches.
+      if (BuildConfig.DEBUG) {
+        DbManager.logEvent(
+          this,
+          "-",
+          "wa-debug: title='$title' people=${peopleUris(notification)}",
+        )
+      }
+      return
+    }
 
     // WhatsApp re-posts the call notification during the ring; warn once.
     val now = System.currentTimeMillis()
@@ -60,6 +70,33 @@ class CallNotificationListener : NotificationListenerService() {
 
     Notifier.postVerdict(this, title.trim(), Prefs.Action.ALLOW, detail, appLabel)
     DbManager.logEvent(this, digits, "warned:${appLabel.lowercase().replace(' ', '-')}:$detail")
+  }
+
+  /**
+   * The caller's number, from (in order): the notification title (WhatsApp
+   * shows the number there for NON-contacts), the call-style `Person`
+   * attachments (URI is typically `tel:+62…` — present even for saved
+   * contacts, and readable without any contacts permission), and the
+   * legacy people extra. Null when no ≥7-digit number is found anywhere.
+   */
+  private fun extractNumberDigits(notification: Notification, title: String): String? {
+    title.filter { it.isDigit() }.takeIf { it.length >= 7 }?.let { return it }
+    for (uri in peopleUris(notification)) {
+      if (!uri.startsWith("tel:", ignoreCase = true)) continue
+      uri.filter { it.isDigit() }.takeIf { it.length >= 7 }?.let { return it }
+    }
+    return null
+  }
+
+  private fun peopleUris(notification: Notification): List<String> {
+    val extras = notification.extras ?: return emptyList()
+    val uris = mutableListOf<String>()
+    @Suppress("DEPRECATION")
+    extras.getParcelableArrayList<android.app.Person>(Notification.EXTRA_PEOPLE_LIST)
+      ?.forEach { person -> person.uri?.let { uris.add(it) } }
+    @Suppress("DEPRECATION")
+    extras.getStringArray(Notification.EXTRA_PEOPLE)?.let { uris.addAll(it) }
+    return uris
   }
 
   private companion object {
