@@ -23,8 +23,8 @@ android {
     // CallScreeningService role exists since API 29 (Android 10) — PRD §7.
     minSdk = 29
     targetSdk = 35
-    versionCode = 5
-    versionName = "0.3.0"
+    versionCode = 6
+    versionName = "0.4.0"
 
     // Only ABIs we cross-compile the Rust core for (cargo ndk -t ...);
     // shipping other ABIs would crash on loadLibrary.
@@ -84,6 +84,8 @@ dependencies {
   implementation("androidx.compose.ui:ui")
   implementation("androidx.compose.foundation:foundation")
   implementation("androidx.compose.material3:material3")
+  // Tab/row icons only; R8 strips the unused 99% from release builds.
+  implementation("androidx.compose.material:material-icons-extended")
   implementation("androidx.activity:activity-compose:1.9.2")
   implementation("androidx.core:core-ktx:1.13.1")
   implementation("androidx.work:work-runtime-ktx:2.9.1")

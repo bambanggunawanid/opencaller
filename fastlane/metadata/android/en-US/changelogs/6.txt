@@ -1,0 +1,6 @@
+New navigation: bottom tabs for Shield, Activity, Rules, and Settings.
+Shield shows protection status at a glance, with the call pause and a
+number lookup. Activity is a human-readable screening history. Settings
+get real switches and Allow/Silence/Block selectors, follow system dark
+mode and Material You colors, and permission states refresh
+automatically after granting.
