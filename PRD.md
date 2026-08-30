@@ -119,7 +119,11 @@ These are commitments, displayed in-app and enforced by architecture:
   opt-in notification-listener companion: warn-only, package-allowlisted,
   offline lookups. Blocking another app's VoIP calls is impossible on
   Android by design; disclosure of the broad notification-access
-  permission lives in-app next to the toggle.
+  permission lives in-app next to the toggle. **Field-verified
+  2026-08-30**: WhatsApp attaches a `tel:` Person URI to call
+  notifications, so rules match even saved contacts (number recovered
+  from structured extras despite a name-only title) — verified on a real
+  device with a real call.
 - iOS app (CallKit Call Directory + Call Blocking extensions).
 - Opt-in anonymous community reporting (see §2 and §8).
 - Business caller ID from open registries (separate optional DB shard).
