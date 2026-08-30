@@ -69,6 +69,14 @@
   <string name="warning_footer">OpenCaller • ketuk di mana saja untuk menutup</string>
 
   <!-- Pembaruan database -->
+  <string name="sync_never_title">Daftar spam Anda belum pernah disinkronkan</string>
+  <string name="sync_stale_title">Daftar spam Anda sudah usang</string>
+  <string name="sync_done_title">Daftar spam diperbarui</string>
+  <string name="sync_body">Satu ketukan mengunduh nomor terlapor terbaru (sekitar 2 MB, tanda tangan diverifikasi di ponsel Anda).</string>
+  <string name="sync_now">Perbarui sekarang</string>
+  <string name="sync_running">Memperbarui…</string>
+  <string name="last_synced">Terakhir sinkron: %1$s</string>
+  <string name="never">belum pernah</string>
   <string name="update_checking">Memeriksa…</string>
   <string name="update_ok">diperbarui, %1$s nomor (dibuat %2$s)</string>
   <string name="update_refused">ditolak: %1$s</string>
@@ -124,6 +132,6 @@
   <string name="update_off">Nonaktif</string>
   <string name="update_wifi">Hanya Wi-Fi</string>
   <string name="update_any">Jaringan apa pun</string>
-  <string name="update_check">Periksa pembaruan database</string>
+  <string name="update_check">Perbarui daftar spam</string>
   <string name="about_line">OpenCaller %1$s — gratis, open source, dan sepenuhnya offline. Tanpa akun, tanpa iklan, tanpa data keluar dari ponsel Anda.</string>
 </resources>

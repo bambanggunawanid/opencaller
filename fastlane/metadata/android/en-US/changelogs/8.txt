@@ -1,0 +1,5 @@
+The app now keeps its spam list fresh by itself: on open, a stale or
+never-synced list triggers an automatic update (honoring your
+Off / Wi-Fi only / Any network setting), and a friendly "Your spam list
+is out of date — Update now" card appears on the Shield tab. Settings
+shows when the list last synced.

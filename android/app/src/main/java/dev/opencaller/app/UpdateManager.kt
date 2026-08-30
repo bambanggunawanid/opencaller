@@ -24,19 +24,62 @@ object UpdateManager {
 
   private const val MAX_SHARD_BYTES = 64L * 1024 * 1024
 
+  /** Shard age (vs. today) after which the UI nags and auto-sync kicks in. */
+  private const val STALE_AFTER_DAYS = 10L
+
+  /** Don't retry a failed launch-time auto-sync more than every 6 hours. */
+  private const val AUTO_SYNC_RETRY_MS = 6L * 60 * 60 * 1000
+
+  fun neverSynced(context: Context): Boolean = Prefs.lastSyncMillis(context) == 0L
+
+  /**
+   * True when the on-device list deserves a refresh: never synced from the
+   * network (a fresh install runs on the small bundled seed — the weekly
+   * job's first run is up to 7 days away), or the newest shard is older
+   * than [STALE_AFTER_DAYS].
+   */
+  fun isStale(context: Context): Boolean {
+    if (neverSynced(context)) return true
+    val builtDays = DbManager.builtDays()
+    if (builtDays <= 0) return true
+    return java.time.LocalDate.now().toEpochDay() - builtDays >= STALE_AFTER_DAYS
+  }
+
+  /**
+   * Launch-time auto-sync gate: stale, updates not OFF, a usable network
+   * for the chosen mode, and no attempt in the last 6 hours. The weekly
+   * WorkManager job stays the background path; this covers the fresh
+   * install and the phone that was off on update day.
+   */
+  fun shouldAutoSync(context: Context): Boolean {
+    if (!isStale(context)) return false
+    val mode = Prefs.updateMode(context)
+    if (mode == Prefs.UpdateMode.OFF) return false
+    val cm = context.getSystemService(android.net.ConnectivityManager::class.java)
+      ?: return false
+    if (cm.activeNetwork == null) return false
+    if (mode == Prefs.UpdateMode.WIFI_ONLY && cm.isActiveNetworkMetered) return false
+    return System.currentTimeMillis() - Prefs.lastSyncAttemptMillis(context) >=
+      AUTO_SYNC_RETRY_MS
+  }
+
   /** Blocking; call off the main thread. Returns a user-displayable line. */
   fun checkAndApply(context: Context): String {
     if (UPDATE_BASE_URL.isBlank()) {
       return L10n.str(context, R.string.update_not_configured)
     }
+    var anyOk = false
     val results = Prefs.enabledCountries(context).map { cc ->
-      "${cc.uppercase()}: ${updateCountry(context, cc)}"
+      val (ok, msg) = updateCountry(context, cc)
+      if (ok) anyOk = true
+      "${cc.uppercase()}: $msg"
     }
+    if (anyOk) Prefs.setLastSyncMillis(context, System.currentTimeMillis())
     DbManager.reload(context)
     return results.joinToString("\n")
   }
 
-  private fun updateCountry(context: Context, country: String): String {
+  private fun updateCountry(context: Context, country: String): Pair<Boolean, String> {
     val name = DbManager.shardName(country)
     return try {
       val shard = fetch("$UPDATE_BASE_URL/$name")
@@ -53,13 +96,13 @@ object UpdateManager {
         parts[0] == "ok" -> {
           val built = parts[2].toLongOrNull()
             ?.let { java.time.LocalDate.ofEpochDay(it).toString() } ?: parts[2]
-          L10n.str(context, R.string.update_ok, parts[1], built)
+          true to L10n.str(context, R.string.update_ok, parts[1], built)
         }
         else ->
-          L10n.str(context, R.string.update_refused, parts.getOrElse(1) { "unknown" })
+          false to L10n.str(context, R.string.update_refused, parts.getOrElse(1) { "unknown" })
       }
     } catch (e: Exception) {
-      L10n.str(context, R.string.update_failed, e.message ?: e.javaClass.simpleName)
+      false to L10n.str(context, R.string.update_failed, e.message ?: e.javaClass.simpleName)
     }
   }
 

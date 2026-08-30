@@ -71,6 +71,14 @@
   <string name="warning_footer">OpenCaller • tap anywhere to dismiss</string>
 
   <!-- Database updates -->
+  <string name="sync_never_title">Your spam list hasn\'t synced yet</string>
+  <string name="sync_stale_title">Your spam list is out of date</string>
+  <string name="sync_done_title">Spam list updated</string>
+  <string name="sync_body">One tap downloads the latest reported numbers (about 2 MB, signature-verified on your phone).</string>
+  <string name="sync_now">Update now</string>
+  <string name="sync_running">Updating…</string>
+  <string name="last_synced">Last synced: %1$s</string>
+  <string name="never">never</string>
   <string name="update_checking">Checking…</string>
   <string name="update_ok">updated, %1$s numbers (built %2$s)</string>
   <string name="update_refused">refused: %1$s</string>
@@ -126,6 +134,6 @@
   <string name="update_off">Off</string>
   <string name="update_wifi">Wi-Fi only</string>
   <string name="update_any">Any network</string>
-  <string name="update_check">Check for database update</string>
+  <string name="update_check">Update spam list</string>
   <string name="about_line">OpenCaller %1$s — free, open source, and fully offline. No account, no ads, no data leaves your phone.</string>
 </resources>

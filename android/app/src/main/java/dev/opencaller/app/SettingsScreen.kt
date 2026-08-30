@@ -211,12 +211,22 @@ fun SettingsScreen() {
         val checking = stringResource(R.string.update_checking)
         Button(onClick = {
           updateStatus = checking
+          Prefs.setLastSyncAttemptMillis(context, System.currentTimeMillis())
           Thread {
             val msg = UpdateManager.checkAndApply(context)
             (context as? ComponentActivity)?.runOnUiThread { updateStatus = msg }
           }.start()
         }) { Text(stringResource(R.string.update_check)) }
         updateStatus?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
+        val lastSync = remember(updateStatus) { Prefs.lastSyncMillis(context) }
+        Text(
+          stringResource(
+            R.string.last_synced,
+            if (lastSync == 0L) stringResource(R.string.never)
+            else java.text.SimpleDateFormat("yyyy-MM-dd HH:mm").format(lastSync),
+          ),
+          style = MaterialTheme.typography.bodySmall,
+        )
       }
     }
 

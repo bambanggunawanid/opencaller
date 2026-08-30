@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.GppBad
 import androidx.compose.material.icons.filled.HourglassTop
 import androidx.compose.material.icons.filled.Shield
@@ -26,7 +27,9 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -57,7 +60,36 @@ fun ShieldScreen(onOpenActivity: () -> Unit) {
     roleHeld = roleManager?.isRoleHeld(RoleManager.ROLE_CALL_SCREENING) == true
   }
 
-  val active = roleHeld && DbManager.verified
+  // Sync state drives both the friendly update banner and the hero card's
+  // DB line (which must refresh after a successful sync).
+  var syncing by remember { mutableStateOf(false) }
+  var syncStatus by remember { mutableStateOf<String?>(null) }
+  var syncTick by remember { mutableIntStateOf(0) }
+  val startSync: () -> Unit = {
+    if (!syncing) {
+      syncing = true
+      Prefs.setLastSyncAttemptMillis(context, System.currentTimeMillis())
+      Thread {
+        val msg = UpdateManager.checkAndApply(context)
+        (context as? android.app.Activity)?.runOnUiThread {
+          syncing = false
+          syncStatus = msg
+          syncTick++
+        }
+      }.start()
+    }
+  }
+  // Auto-sync on open when the list is stale — covers the fresh install
+  // (the weekly job's first run is days away) and phones that missed it.
+  LaunchedEffect(Unit) { if (UpdateManager.shouldAutoSync(context)) startSync() }
+
+  val stale = remember(syncTick) { UpdateManager.isStale(context) }
+  val neverSynced = remember(syncTick) { UpdateManager.neverSynced(context) }
+  val dbVerified = remember(syncTick) { DbManager.verified }
+  val dbCount = remember(syncTick) { DbManager.entryCount() }
+  val dbBuilt = remember(syncTick) { DbManager.builtDays() }
+
+  val active = roleHeld && dbVerified
   val events = remember { DbManager.recentEvents(context) }
 
   LazyColumn(
@@ -94,11 +126,11 @@ fun ShieldScreen(onOpenActivity: () -> Unit) {
             )
           }
           Text(
-            if (DbManager.verified)
+            if (dbVerified)
               stringResource(
                 R.string.shield_db_ok,
-                DbManager.entryCount(),
-                LocalDate.ofEpochDay(DbManager.builtDays().toLong()).toString(),
+                dbCount,
+                LocalDate.ofEpochDay(dbBuilt.toLong()).toString(),
               )
             else stringResource(R.string.shield_db_fail),
             style = MaterialTheme.typography.bodyMedium,
@@ -113,6 +145,50 @@ fun ShieldScreen(onOpenActivity: () -> Unit) {
                 ?.createRequestRoleIntent(RoleManager.ROLE_CALL_SCREENING)
                 ?.let { roleLauncher.launch(it) }
             }) { Text(stringResource(R.string.shield_enable)) }
+          }
+        }
+      }
+    }
+
+    if (stale || syncing || syncStatus != null) {
+      item {
+        Card(
+          Modifier.fillMaxWidth(),
+          colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+          ),
+        ) {
+          Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(
+              horizontalArrangement = Arrangement.spacedBy(8.dp),
+              verticalAlignment = Alignment.CenterVertically,
+            ) {
+              Icon(Icons.Filled.CloudDownload, contentDescription = null)
+              Text(
+                stringResource(
+                  when {
+                    !stale && !syncing -> R.string.sync_done_title
+                    neverSynced -> R.string.sync_never_title
+                    else -> R.string.sync_stale_title
+                  },
+                ),
+                style = MaterialTheme.typography.titleMedium,
+              )
+            }
+            if (stale) {
+              Text(
+                stringResource(R.string.sync_body),
+                style = MaterialTheme.typography.bodySmall,
+              )
+              Button(enabled = !syncing, onClick = startSync) {
+                Text(
+                  stringResource(
+                    if (syncing) R.string.sync_running else R.string.sync_now,
+                  ),
+                )
+              }
+            }
+            syncStatus?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
           }
         }
       }

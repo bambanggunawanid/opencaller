@@ -154,6 +154,22 @@ object Prefs {
     prefs(context).edit().putBoolean("wangiri_learn", on).apply()
   }
 
+  /** Millis of the last successful shard sync from the network (0 = never). */
+  fun lastSyncMillis(context: Context): Long =
+    prefs(context).getLong("last_sync", 0)
+
+  fun setLastSyncMillis(context: Context, at: Long) {
+    prefs(context).edit().putLong("last_sync", at).apply()
+  }
+
+  /** Throttle for launch-time auto-sync attempts (success or not). */
+  fun lastSyncAttemptMillis(context: Context): Long =
+    prefs(context).getLong("last_sync_attempt", 0)
+
+  fun setLastSyncAttemptMillis(context: Context, at: Long) {
+    prefs(context).edit().putLong("last_sync_attempt", at).apply()
+  }
+
   /** UI language override: "" = follow system, else a BCP-47 tag. */
   fun language(context: Context): String =
     prefs(context).getString("language", "") ?: ""
