@@ -49,21 +49,49 @@ object Notifier {
       Prefs.Action.SILENCE -> "Silenced suspicious $callWord"
       Prefs.Action.ALLOW -> "⚠ Suspicious $callWord"
     }
-    val notification = NotificationCompat.Builder(context, CHANNEL)
+    val body = "$number — ${friendly(detail)}"
+    val builder = NotificationCompat.Builder(context, CHANNEL)
       .setSmallIcon(R.drawable.ic_notification)
       .setContentTitle(title)
-      .setContentText("$number — ${friendly(detail)}")
+      .setContentText(body)
       .setPriority(NotificationCompat.PRIORITY_HIGH)
       .setCategory(NotificationCompat.CATEGORY_STATUS)
       .setOnlyAlertOnce(true)
       .setAutoCancel(true)
-      .build()
+
+    // Screen-off/locked case of the large badge: overlays cannot draw over
+    // the keyguard, so attach a full-screen intent (fires only when the
+    // device is not in use; in-use devices get the heads-up + overlay).
+    if (Prefs.overlayEnabled(context) && canUseFullScreen(context)) {
+      val intent = android.content.Intent(context, WarningActivity::class.java)
+        .putExtra(WarningActivity.EXTRA_TITLE, title)
+        .putExtra(WarningActivity.EXTRA_BODY, body)
+        .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+      builder.setFullScreenIntent(
+        android.app.PendingIntent.getActivity(
+          context,
+          number.hashCode(),
+          intent,
+          android.app.PendingIntent.FLAG_UPDATE_CURRENT or
+            android.app.PendingIntent.FLAG_IMMUTABLE,
+        ),
+        true,
+      )
+    }
+    val notification = builder.build()
     try {
       // One slot per number: repeat calls update instead of stacking.
       nm.notify(number.hashCode(), notification)
     } catch (_: SecurityException) {
       // POST_NOTIFICATIONS revoked mid-flight; the call outcome stands.
     }
+  }
+
+  /** Android 14+ can revoke full-screen-intent use per app. */
+  fun canUseFullScreen(context: Context): Boolean {
+    if (android.os.Build.VERSION.SDK_INT < 34) return true
+    return context.getSystemService(NotificationManager::class.java)
+      ?.canUseFullScreenIntent() == true
   }
 
   fun friendly(detail: String): String {

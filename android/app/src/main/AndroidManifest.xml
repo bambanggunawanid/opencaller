@@ -12,12 +12,25 @@
   <!-- Opt-in large on-screen badge during flagged calls (special-access
        toggle; inert until the user grants "Display over other apps"). -->
   <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+  <!-- Screen-off case of the same badge: overlays cannot draw over the
+       keyguard, so the warning uses a full-screen intent like any calling
+       app. Only attached when the badge toggle is on. -->
+  <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
 
   <application
     android:label="OpenCaller"
     android:icon="@mipmap/ic_launcher"
     android:allowBackup="false"
     android:theme="@android:style/Theme.Material.Light.NoActionBar">
+
+    <activity
+      android:name=".WarningActivity"
+      android:exported="false"
+      android:showWhenLocked="true"
+      android:turnScreenOn="true"
+      android:excludeFromRecents="true"
+      android:launchMode="singleInstance"
+      android:theme="@android:style/Theme.Material.NoActionBar" />
 
     <activity
       android:name=".MainActivity"

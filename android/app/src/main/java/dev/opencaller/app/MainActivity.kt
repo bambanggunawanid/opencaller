@@ -289,9 +289,23 @@ fun HomeScreen() {
           "Shows a big red warning card over the screen while a flagged " +
             "call rings (also for WhatsApp/SMS warnings). Needs the " +
             "'Display over other apps' / 'Appear on top' permission — used " +
-            "only to draw this card; tap it to dismiss.",
+            "only to draw this card; tap it to dismiss. When the screen is " +
+            "off or locked, the warning lights the screen as a full-screen " +
+            "alert instead (overlays can't draw over the lock screen).",
           style = MaterialTheme.typography.bodySmall,
         )
+        if (android.os.Build.VERSION.SDK_INT >= 34 &&
+          overlayPref && !Notifier.canUseFullScreen(context)
+        ) {
+          TextButton(onClick = {
+            context.startActivity(
+              android.content.Intent(
+                android.provider.Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT,
+                android.net.Uri.parse("package:${context.packageName}"),
+              ),
+            )
+          }) { Text("Allow full-screen alerts (screen-off warnings)") }
+        }
         if (overlayPref && !overlayGranted) {
           Text(
             "Permission not granted yet — the badge cannot appear. Tap " +

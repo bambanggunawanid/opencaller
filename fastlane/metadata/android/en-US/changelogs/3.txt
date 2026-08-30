@@ -1,0 +1,2 @@
+• Screen-off warnings: flagged calls now light the screen with a full-screen alert when the phone is locked or asleep (overlays can't draw over the lock screen)
+• Debug builds ship alongside releases, signed with the same key
