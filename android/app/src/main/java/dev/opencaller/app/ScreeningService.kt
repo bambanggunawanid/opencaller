@@ -65,6 +65,15 @@ class ScreeningService : CallScreeningService() {
     // user's decision), and silence-unknown mode (a mode, not a verdict).
     if (detail != null && detail != "user-allow" && detail != "unknown-mode") {
       Notifier.postVerdict(this, number, action, detail)
+      // Large opt-in badge — not for REJECT (the call never rings; the
+      // notification is the record).
+      if (action != Prefs.Action.REJECT) {
+        OverlayWarning.show(
+          this,
+          if (action == Prefs.Action.SILENCE) "⚠ Spam call silenced" else "⚠ Suspicious call",
+          "$number — ${Notifier.friendly(detail)}",
+        )
+      }
     }
 
     DbManager.logEvent(

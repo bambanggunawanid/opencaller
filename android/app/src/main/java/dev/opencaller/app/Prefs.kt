@@ -20,6 +20,14 @@ object Prefs {
     "sms-spam",
   )
 
+  /** Large on-screen overlay badge during flagged calls (opt-in). */
+  fun overlayEnabled(context: Context): Boolean =
+    prefs(context).getBoolean("overlay_warning", false)
+
+  fun setOverlayEnabled(context: Context, on: Boolean) {
+    prefs(context).edit().putBoolean("overlay_warning", on).apply()
+  }
+
   /** F-SMS: what the notification listener does with spam texts. */
   enum class SmsMode { OFF, WARN, MUTE }
 

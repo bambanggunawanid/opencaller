@@ -66,7 +66,7 @@ object Notifier {
     }
   }
 
-  private fun friendly(detail: String): String {
+  fun friendly(detail: String): String {
     val parts = detail.split(':')
     return when (parts[0]) {
       "user-block" -> "matched your block rule"

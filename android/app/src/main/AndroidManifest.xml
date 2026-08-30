@@ -9,6 +9,9 @@
   <uses-permission android:name="android.permission.INTERNET" />
   <!-- F1 label surface: heads-up warnings for flagged/blocked calls. -->
   <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+  <!-- Opt-in large on-screen badge during flagged calls (special-access
+       toggle; inert until the user grants "Display over other apps"). -->
+  <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
 
   <application
     android:label="OpenCaller"

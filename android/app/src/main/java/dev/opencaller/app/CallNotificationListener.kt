@@ -85,6 +85,11 @@ class CallNotificationListener : NotificationListenerService() {
     } ?: return
 
     Notifier.postVerdict(this, title.trim(), Prefs.Action.ALLOW, detail, "$appLabel call")
+    OverlayWarning.show(
+      this,
+      "⚠ Suspicious $appLabel call",
+      "${title.trim()} — ${Notifier.friendly(detail)}",
+    )
     DbManager.logEvent(this, digits, "warned:${appLabel.lowercase().replace(' ', '-')}:$detail")
   }
 
@@ -128,6 +133,11 @@ class CallNotificationListener : NotificationListenerService() {
     } else {
       if (!shouldProcess(key)) return
       Notifier.postVerdict(this, title.trim(), Prefs.Action.ALLOW, detail, "text message")
+      OverlayWarning.show(
+        this,
+        "⚠ Suspicious text message",
+        "${title.trim()} — ${Notifier.friendly(detail)}",
+      )
       DbManager.logEvent(this, key, "warned:sms:$detail")
     }
   }

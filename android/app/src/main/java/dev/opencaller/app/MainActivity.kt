@@ -237,6 +237,39 @@ fun HomeScreen() {
     }
 
     item {
+      var overlayOn by remember { mutableStateOf(Prefs.overlayEnabled(context)) }
+      Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Row(
+          Modifier.fillMaxWidth(),
+          horizontalArrangement = Arrangement.SpaceBetween,
+          verticalAlignment = Alignment.CenterVertically,
+        ) {
+          Text("Large on-screen spam badge", style = MaterialTheme.typography.bodyLarge)
+          TextButton(onClick = {
+            val turningOn = !overlayOn
+            if (turningOn && !android.provider.Settings.canDrawOverlays(context)) {
+              context.startActivity(
+                android.content.Intent(
+                  android.provider.Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                  android.net.Uri.parse("package:${context.packageName}"),
+                ),
+              )
+            }
+            overlayOn = turningOn
+            Prefs.setOverlayEnabled(context, turningOn)
+          }) { Text(if (overlayOn) "ON" else "OFF") }
+        }
+        Text(
+          "Shows a big red warning card over the screen while a flagged " +
+            "call rings (also for WhatsApp/SMS warnings). Needs the " +
+            "'Display over other apps' permission — used only to draw " +
+            "this card; tap it to dismiss.",
+          style = MaterialTheme.typography.bodySmall,
+        )
+      }
+    }
+
+    item {
       var refresh by remember { mutableStateOf(0) }
       val listenerOn = remember(refresh) {
         androidx.core.app.NotificationManagerCompat
