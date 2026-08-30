@@ -115,6 +115,11 @@ These are commitments, displayed in-app and enforced by architecture:
 | F8 | Zero-setup default | Install → grant call-screening role → protected. No account, no wizard beyond country selection (pre-filled from SIM) |
 
 ### Phase 2
+- ~~VoIP (WhatsApp) call warnings~~ — shipped early (2026-08-30) as an
+  opt-in notification-listener companion: warn-only, package-allowlisted,
+  offline lookups. Blocking another app's VoIP calls is impossible on
+  Android by design; disclosure of the broad notification-access
+  permission lives in-app next to the toggle.
 - iOS app (CallKit Call Directory + Call Blocking extensions).
 - Opt-in anonymous community reporting (see §2 and §8).
 - Business caller ID from open registries (separate optional DB shard).

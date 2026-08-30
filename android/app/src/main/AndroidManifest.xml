@@ -25,6 +25,21 @@
       </intent-filter>
     </activity>
 
+    <!-- Opt-in WhatsApp call warnings. Notification access is a broad OS
+         permission; our code processes ONLY WhatsApp incoming-call
+         notifications (see CallNotificationListener's privacy contract).
+         Warn-only: Android does not allow blocking another app's VoIP
+         calls. Disabled until the user enables it in system settings. -->
+    <service
+      android:name=".CallNotificationListener"
+      android:label="OpenCaller WhatsApp call warnings"
+      android:exported="false"
+      android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
+      <intent-filter>
+        <action android:name="android.service.notification.NotificationListenerService" />
+      </intent-filter>
+    </service>
+
     <service
       android:name=".ScreeningService"
       android:permission="android.permission.BIND_SCREENING_SERVICE"

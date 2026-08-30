@@ -236,6 +236,41 @@ fun HomeScreen() {
       }
     }
 
+    item {
+      var refresh by remember { mutableStateOf(0) }
+      val listenerOn = remember(refresh) {
+        androidx.core.app.NotificationManagerCompat
+          .getEnabledListenerPackages(context)
+          .contains(context.packageName)
+      }
+      Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Row(
+          Modifier.fillMaxWidth(),
+          horizontalArrangement = Arrangement.SpaceBetween,
+          verticalAlignment = Alignment.CenterVertically,
+        ) {
+          Text("WhatsApp call warnings", style = MaterialTheme.typography.bodyLarge)
+          TextButton(onClick = {
+            context.startActivity(
+              android.content.Intent(
+                android.provider.Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS,
+              ),
+            )
+            refresh++
+          }) { Text(if (listenerOn) "ON — manage" else "OFF — enable") }
+        }
+        Text(
+          "Optional: warns when a reported number calls you on WhatsApp. " +
+            "Uses Android's notification access — a broad permission; " +
+            "OpenCaller only reads WhatsApp incoming-call notifications " +
+            "(open source, verifiable) and still works fully offline. " +
+            "Warn-only: Android does not allow blocking VoIP calls. " +
+            "Tip: WhatsApp Settings → Privacy → Calls can silence unknown callers.",
+          style = MaterialTheme.typography.bodySmall,
+        )
+      }
+    }
+
     item { Text("Your rules", style = MaterialTheme.typography.titleMedium) }
     item {
       var ruleInput by remember { mutableStateOf("") }

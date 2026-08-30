@@ -37,15 +37,17 @@ object Notifier {
     number: String,
     action: Prefs.Action,
     detail: String,
+    appLabel: String? = null,
   ) {
     val nm = NotificationManagerCompat.from(context)
     if (!nm.areNotificationsEnabled()) return
     ensureChannel(context)
 
+    val callWord = if (appLabel == null) "call" else "$appLabel call"
     val title = when (action) {
-      Prefs.Action.REJECT -> "Blocked call"
-      Prefs.Action.SILENCE -> "Silenced suspicious call"
-      Prefs.Action.ALLOW -> "⚠ Suspicious call"
+      Prefs.Action.REJECT -> "Blocked $callWord"
+      Prefs.Action.SILENCE -> "Silenced suspicious $callWord"
+      Prefs.Action.ALLOW -> "⚠ Suspicious $callWord"
     }
     val notification = NotificationCompat.Builder(context, CHANNEL)
       .setSmallIcon(R.drawable.ic_notification)
@@ -53,6 +55,7 @@ object Notifier {
       .setContentText("$number — ${friendly(detail)}")
       .setPriority(NotificationCompat.PRIORITY_HIGH)
       .setCategory(NotificationCompat.CATEGORY_STATUS)
+      .setOnlyAlertOnce(true)
       .setAutoCancel(true)
       .build()
     try {
