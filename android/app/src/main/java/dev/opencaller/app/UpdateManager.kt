@@ -29,26 +29,32 @@ object UpdateManager {
     if (UPDATE_BASE_URL.isBlank()) {
       return "Updates not configured yet (no release channel)"
     }
+    val results = Prefs.enabledCountries(context).map { cc ->
+      "${cc.uppercase()}: ${updateCountry(context, cc)}"
+    }
+    DbManager.reload(context)
+    return results.joinToString("\n")
+  }
+
+  private fun updateCountry(context: Context, country: String): String {
+    val name = DbManager.shardName(country)
     return try {
-      val shard = fetch("$UPDATE_BASE_URL/${DbManager.SHARD}")
-      val sig = fetch("$UPDATE_BASE_URL/${DbManager.SHARD}.sig")
+      val shard = fetch("$UPDATE_BASE_URL/$name")
+      val sig = fetch("$UPDATE_BASE_URL/$name.sig")
       val result = NativeCore.nativeApplyUpdate(
         context.filesDir.absolutePath,
-        DbManager.SHARD,
+        name,
         shard,
         sig,
         java.io.File(context.filesDir, DbManager.PUBKEY).absolutePath,
       )
       val parts = result.split('|')
       when {
-        parts[0] == "ok" -> {
-          DbManager.reload(context)
-          "Updated: ${parts[1]} numbers (built day ${parts[2]})"
-        }
-        else -> "Update refused: ${parts.getOrElse(1) { "unknown" }}"
+        parts[0] == "ok" -> "updated, ${parts[1]} numbers (built day ${parts[2]})"
+        else -> "refused: ${parts.getOrElse(1) { "unknown" }}"
       }
     } catch (e: Exception) {
-      "Update failed: ${e.message}"
+      "failed: ${e.message}"
     }
   }
 

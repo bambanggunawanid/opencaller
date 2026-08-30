@@ -51,6 +51,36 @@ object Prefs {
     prefs(context).edit().putString("own_number", number).apply()
   }
 
+  // ---- F3 country shards ----
+
+  /** Countries with a published shard (mirror of the CI matrix). */
+  val AVAILABLE_SHARDS = setOf("us")
+
+  /** SIM country (ISO 3166-1 alpha-2, lowercase) — no permission needed. */
+  fun simCountry(context: Context): String =
+    context.getSystemService(android.telephony.TelephonyManager::class.java)
+      ?.simCountryIso?.lowercase().orEmpty()
+
+  /**
+   * Enabled shard countries. First call defaults to the SIM country when a
+   * shard exists for it, else "us", and persists the choice.
+   */
+  fun enabledCountries(context: Context): Set<String> {
+    prefs(context).getStringSet("countries.enabled", null)?.let { stored ->
+      return stored.filter { it in AVAILABLE_SHARDS }.toSet()
+    }
+    val sim = simCountry(context)
+    val default = if (sim in AVAILABLE_SHARDS) setOf(sim) else setOf("us")
+    prefs(context).edit().putStringSet("countries.enabled", default).apply()
+    return default
+  }
+
+  fun setCountryEnabled(context: Context, country: String, enabled: Boolean) {
+    val set = enabledCountries(context).toMutableSet()
+    if (enabled) set.add(country) else set.remove(country)
+    prefs(context).edit().putStringSet("countries.enabled", set).apply()
+  }
+
   // ---- F5 user rules (see RuleEngine for format and precedence) ----
 
   fun allowRules(context: Context): Set<String> =

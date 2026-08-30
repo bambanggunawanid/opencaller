@@ -1,6 +1,13 @@
-# M1 (PRD §8): weekly cron building signed OCDB shards from public data.
-# The signing key lives ONLY in repo secrets (and offline backup) — the
-# same key whose public half is pinned in the app.
+# M1/F3 (PRD §8): weekly cron building signed per-country OCDB shards from
+# public data. The signing key lives ONLY in repo secrets (and offline
+# backup) — the same key whose public half is pinned in the app.
+#
+# Adding a country = one matrix entry + a fetch script + (usually) a new
+# source schema in opencaller-pipeline. Reality check (PRD §13 risk 1):
+# most regulators publish only aggregate stats; the US is unusual in
+# publishing per-number complaint data (FTC + FCC). Until other countries
+# have sources, coverage elsewhere comes from heuristics and, later, M3
+# community reporting.
 name: build-shards
 
 on:
@@ -12,46 +19,71 @@ permissions:
   contents: write # publish the shard release
 
 jobs:
-  us-shard:
+  build:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - country: us
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
 
-      - name: Fetch FTC DNC data (last 30 days)
-        run: scripts/fetch-ftc.sh data/ftc 30
+      - name: Fetch public sources (${{ matrix.country }})
+        run: |
+          mkdir -p data/src
+          case "${{ matrix.country }}" in
+            us)
+              scripts/fetch-ftc.sh data/src 30
+              scripts/fetch-fcc.sh data/src 180
+              ;;
+            *) echo "no fetch recipe for ${{ matrix.country }}" >&2; exit 1 ;;
+          esac
 
       - name: Build + sign shard
         env:
           SHARD_SIGNING_KEY: ${{ secrets.SHARD_SIGNING_KEY_BASE64 }}
+          CC: ${{ matrix.country }}
         run: |
           echo "$SHARD_SIGNING_KEY" | base64 -d > /tmp/shard_signing.key
           cargo run --release -p opencaller-pipeline -- build \
-            --country US \
+            --country "${CC^^}" \
             --today "$(date -u +%F)" \
             --max-age-days 180 \
-            --out us.ocdb \
+            --out "${CC}.ocdb" \
             --sign /tmp/shard_signing.key \
-            data/ftc/*.csv
+            data/src/*.csv
           rm /tmp/shard_signing.key
 
       - name: Verify before publishing
         run: |
           cargo run --release -p opencaller-pipeline -- verify \
-            --pubkey android/app/src/main/assets/shard_signing.pub us.ocdb
+            --pubkey android/app/src/main/assets/shard_signing.pub \
+            "${{ matrix.country }}.ocdb"
 
-      # The app fetches from releases/latest/download/<file>, so each run
-      # publishes a dated release marked latest. Clients verify the Ed25519
-      # signature against the pinned pubkey — the release channel needs no
-      # trust (PRD §9).
-      - name: Publish release
-        uses: softprops/action-gh-release@v2
+      - uses: actions/upload-artifact@v4
+        with:
+          name: shard-${{ matrix.country }}
+          path: |
+            ${{ matrix.country }}.ocdb
+            ${{ matrix.country }}.ocdb.sig
+            ${{ matrix.country }}.ocdb.manifest.json
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: shard-*
+          merge-multiple: true
+      # The app fetches releases/latest/download/<cc>.ocdb; each run
+      # publishes a dated release marked latest. Clients verify Ed25519
+      # against the pinned pubkey — the channel needs no trust (PRD §9).
+      - uses: softprops/action-gh-release@v2
         with:
           tag_name: shards-${{ github.run_id }}
           name: "DB shards ${{ github.run_id }}"
           body: "Weekly signed OCDB shards. Verify with android/app/src/main/assets/shard_signing.pub."
           make_latest: "true"
-          files: |
-            us.ocdb
-            us.ocdb.sig
-            us.ocdb.manifest.json
+          files: "*.ocdb*"

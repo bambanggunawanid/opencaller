@@ -2,9 +2,15 @@
 //! OCDB shards. Runs in CI; the same `opencaller-core` code that builds the
 //! shard is what reads it on-phone, so the format cannot drift.
 //!
-//! Ingests the FTC Do-Not-Call daily complaint CSVs
-//! (`DNC_Complaint_Numbers_YYYY-MM-DD.csv`, columns: Company_Phone_Number,
-//! Created_Date, Violation_Date, ..., Subject, Recorded_Message_Or_Robocall).
+//! Ingests two source schemas, auto-detected per file by headers:
+//! - FTC Do-Not-Call daily CSVs (`DNC_Complaint_Numbers_*.csv`:
+//!   Company_Phone_Number, Violation_Date, Subject,
+//!   Recorded_Message_Or_Robocall)
+//! - FCC Consumer Complaints "Unwanted Calls" Socrata CSV export
+//!   (caller_id_number, issue, type_of_call_or_messge). The public view
+//!   returns no per-row dates, so fetch date-filtered server-side
+//!   (scripts/fetch-fcc.sh) and rows are stamped with --today;
+//!   "Text Message" rows are skipped (SMS is out of scope, PRD §3).
 //!
 //! Commands:
 //!   keygen  --out-dir <dir>
@@ -107,15 +113,34 @@ struct IngestStats {
   skipped_bad_number: u64,
   skipped_bad_date: u64,
   aged_out: u64,
+  /// FCC rows that are not phone calls (e.g. "Text Message").
+  skipped_non_call: u64,
+}
+
+/// FCC row → category. `issue` distinguishes robocalls; the call-type field
+/// separates prerecorded from live telemarketing.
+fn map_fcc(issue: &str, call_type: &str) -> Category {
+  let (issue, call_type) = (issue.to_ascii_lowercase(), call_type.to_ascii_lowercase());
+  if call_type.contains("prerecorded") || issue.contains("robocall") {
+    Category::Robocall
+  } else {
+    Category::Telemarketing
+  }
 }
 
 fn ingest_csvs(
   paths: &[PathBuf],
   min_days: i64,
+  today_days: i64,
 ) -> Result<(HashMap<u64, NumberAgg>, IngestStats), String> {
   let mut agg: HashMap<u64, NumberAgg> = HashMap::new();
-  let mut stats =
-    IngestStats { rows: 0, skipped_bad_number: 0, skipped_bad_date: 0, aged_out: 0 };
+  let mut stats = IngestStats {
+    rows: 0,
+    skipped_bad_number: 0,
+    skipped_bad_date: 0,
+    aged_out: 0,
+    skipped_non_call: 0,
+  };
 
   for path in paths {
     let mut rdr = csv::ReaderBuilder::new()
@@ -126,11 +151,38 @@ fn ingest_csvs(
     let col = |name: &str| {
       headers.iter().position(|h| h.eq_ignore_ascii_case(name))
     };
+
+    // FCC "Unwanted Calls" export: no per-row dates in the public view
+    // (server-side date filter in the fetch script); stamp with today.
+    if let Some(c_phone) = col("caller_id_number") {
+      let c_issue = col("issue");
+      let c_type = col("type_of_call_or_messge");
+      for record in rdr.records() {
+        let record = record.map_err(|e| e.to_string())?;
+        stats.rows += 1;
+        let call_type = c_type.and_then(|c| record.get(c)).unwrap_or_default();
+        if call_type.eq_ignore_ascii_case("Text Message") {
+          stats.skipped_non_call += 1;
+          continue;
+        }
+        let Some(number) = record.get(c_phone).and_then(normalize_nanp) else {
+          stats.skipped_bad_number += 1;
+          continue;
+        };
+        let issue = c_issue.and_then(|c| record.get(c)).unwrap_or_default();
+        let e = agg.entry(number).or_default();
+        e.count += 1;
+        e.latest_days = e.latest_days.max(today_days);
+        *e.votes.entry(map_fcc(issue, call_type)).or_default() += 1;
+      }
+      continue;
+    }
+
     let (Some(c_phone), Some(c_subject)) =
       (col("Company_Phone_Number"), col("Subject"))
     else {
       return Err(format!(
-        "{}: missing Company_Phone_Number/Subject columns",
+        "{}: unrecognized schema (need Company_Phone_Number/Subject or caller_id_number)",
         path.display()
       ));
     };
@@ -210,7 +262,7 @@ fn cmd_build(
     parse_date_days(today).ok_or_else(|| format!("bad --today date: {today}"))?;
   let min_days = today_days - max_age_days;
 
-  let (agg, stats) = ingest_csvs(inputs, min_days)?;
+  let (agg, stats) = ingest_csvs(inputs, min_days, today_days)?;
   if agg.is_empty() {
     return Err("no usable rows — refusing to build an empty shard".into());
   }
@@ -246,8 +298,9 @@ fn cmd_build(
 
   // Tiny hand-rolled manifest (all values are simple; no JSON dep needed).
   let manifest = format!(
-    "{{\n  \"format\": \"OCDB0001\",\n  \"country\": \"{country}\",\n  \"built\": \"{today}\",\n  \"entries\": {},\n  \"source_rows\": {},\n  \"skipped_bad_number\": {},\n  \"skipped_bad_date\": {},\n  \"aged_out\": {},\n  \"max_age_days\": {max_age_days},\n  \"sha256\": \"{sha256}\",\n  \"signed\": {signed}\n}}\n",
-    build.entries, stats.rows, stats.skipped_bad_number, stats.skipped_bad_date, stats.aged_out,
+    "{{\n  \"format\": \"OCDB0001\",\n  \"country\": \"{country}\",\n  \"built\": \"{today}\",\n  \"entries\": {},\n  \"source_rows\": {},\n  \"skipped_bad_number\": {},\n  \"skipped_bad_date\": {},\n  \"skipped_non_call\": {},\n  \"aged_out\": {},\n  \"max_age_days\": {max_age_days},\n  \"sha256\": \"{sha256}\",\n  \"signed\": {signed}\n}}\n",
+    build.entries, stats.rows, stats.skipped_bad_number, stats.skipped_bad_date,
+    stats.skipped_non_call, stats.aged_out,
   );
   fs::write(format!("{}.manifest.json", out.display()), &manifest)
     .map_err(|e| e.to_string())?;
@@ -400,6 +453,36 @@ mod tests {
     assert_eq!(map_subject("Dropped call or no message", false), Category::Robocall);
     assert_eq!(map_subject("Something unrecognized", true), Category::Robocall);
     assert_eq!(map_subject("Something unrecognized", false), Category::Other);
+  }
+
+  #[test]
+  fn fcc_schema_ingest() {
+    let dir = std::env::temp_dir().join(format!("ocp-fcc-{}", std::process::id()));
+    fs::create_dir_all(&dir).unwrap();
+    let csv_path = dir.join("fcc.csv");
+    fs::write(
+      &csv_path,
+      "caller_id_number,issue,type_of_call_or_messge\n\
+       916-518-3100,Unwanted Calls,Prerecorded Voice\n\
+       916-518-3100,Robocalls,\n\
+       512-903-6103,Unwanted Calls,Live Voice\n\
+       555-0100,Unwanted Calls,Live Voice\n\
+       860-451-4226,Unwanted Calls,Text Message\n",
+    )
+    .unwrap();
+
+    let (agg, stats) = ingest_csvs(&[csv_path], 0, 20_700).unwrap();
+    assert_eq!(stats.rows, 5);
+    assert_eq!(stats.skipped_non_call, 1); // SMS row
+    assert_eq!(stats.skipped_bad_number, 1); // 7-digit number
+    assert_eq!(agg.len(), 2);
+    let robo = &agg[&19_165_183_100];
+    assert_eq!(robo.count, 2);
+    assert_eq!(robo.latest_days, 20_700); // stamped with --today
+    assert_eq!(majority_category(&robo.votes), Category::Robocall);
+    assert_eq!(majority_category(&agg[&15_129_036_103].votes), Category::Telemarketing);
+
+    fs::remove_dir_all(&dir).ok();
   }
 
   #[test]

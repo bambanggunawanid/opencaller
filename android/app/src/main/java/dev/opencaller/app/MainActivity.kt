@@ -123,6 +123,44 @@ fun HomeScreen() {
       }
     }
 
+    item { Text("Country databases", style = MaterialTheme.typography.titleMedium) }
+    item {
+      var enabled by remember { mutableStateOf(Prefs.enabledCountries(context)) }
+      val infos = remember(enabled) { DbManager.shardInfos().associateBy { it.country } }
+      Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        for (cc in Prefs.AVAILABLE_SHARDS.sorted()) {
+          val info = infos[cc]
+          Row(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+          ) {
+            Text(
+              if (info != null)
+                "${cc.uppercase()} — ${info.entries} numbers, built " +
+                  java.time.LocalDate.ofEpochDay(info.builtDays.toLong())
+              else "${cc.uppercase()} — downloads with next update",
+              style = MaterialTheme.typography.bodyMedium,
+            )
+            TextButton(onClick = {
+              Prefs.setCountryEnabled(context, cc, cc !in enabled)
+              enabled = Prefs.enabledCountries(context)
+              DbManager.reload(context)
+            }) { Text(if (cc in enabled) "ON" else "OFF") }
+          }
+        }
+        val sim = Prefs.simCountry(context)
+        if (sim.isNotEmpty() && sim !in Prefs.AVAILABLE_SHARDS) {
+          Text(
+            "No public spam data exists yet for your SIM country " +
+              "(${sim.uppercase()}) — calls there are still protected by " +
+              "spoofing/invalid-number heuristics.",
+            style = MaterialTheme.typography.bodySmall,
+          )
+        }
+      }
+    }
+
     item { Text("Screening actions", style = MaterialTheme.typography.titleMedium) }
     items(Prefs.CATEGORIES + Prefs.HEURISTIC) { category ->
       var action by remember { mutableStateOf(Prefs.action(context, category)) }

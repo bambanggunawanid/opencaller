@@ -456,11 +456,16 @@ mod tests {
   // Minimal self-cleaning temp file helper (no extra dev-dependency).
   mod tempdir {
     use std::path::PathBuf;
+    use std::sync::atomic::{AtomicU64, Ordering};
+    // Tests run in parallel threads of one process: PID alone is not
+    // unique enough, so add a per-call counter.
+    static SEQ: AtomicU64 = AtomicU64::new(0);
     pub struct TempPath(pub PathBuf);
     impl TempPath {
       pub fn new(tag: &str) -> Self {
         let mut p = std::env::temp_dir();
-        p.push(format!("{tag}-{}.ocdb", std::process::id()));
+        let n = SEQ.fetch_add(1, Ordering::Relaxed);
+        p.push(format!("{tag}-{}-{n}.ocdb", std::process::id()));
         Self(p)
       }
     }
