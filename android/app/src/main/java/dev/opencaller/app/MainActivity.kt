@@ -237,7 +237,11 @@ fun HomeScreen() {
     }
 
     item {
-      var overlayOn by remember { mutableStateOf(Prefs.overlayEnabled(context)) }
+      var overlayRefresh by remember { mutableStateOf(0) }
+      val overlayGranted = remember(overlayRefresh) {
+        android.provider.Settings.canDrawOverlays(context)
+      }
+      var overlayPref by remember { mutableStateOf(Prefs.overlayEnabled(context)) }
       Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Row(
           Modifier.fillMaxWidth(),
@@ -246,26 +250,79 @@ fun HomeScreen() {
         ) {
           Text("Large on-screen spam badge", style = MaterialTheme.typography.bodyLarge)
           TextButton(onClick = {
-            val turningOn = !overlayOn
-            if (turningOn && !android.provider.Settings.canDrawOverlays(context)) {
-              context.startActivity(
+            when {
+              !overlayPref -> {
+                overlayPref = true
+                Prefs.setOverlayEnabled(context, true)
+                if (!overlayGranted) {
+                  context.startActivity(
+                    android.content.Intent(
+                      android.provider.Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                      android.net.Uri.parse("package:${context.packageName}"),
+                    ),
+                  )
+                }
+              }
+              !overlayGranted -> context.startActivity(
                 android.content.Intent(
                   android.provider.Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
                   android.net.Uri.parse("package:${context.packageName}"),
                 ),
               )
+              else -> {
+                overlayPref = false
+                Prefs.setOverlayEnabled(context, false)
+              }
             }
-            overlayOn = turningOn
-            Prefs.setOverlayEnabled(context, turningOn)
-          }) { Text(if (overlayOn) "ON" else "OFF") }
+            overlayRefresh++
+          }) {
+            Text(
+              when {
+                !overlayPref -> "OFF"
+                !overlayGranted -> "GRANT"
+                else -> "ON"
+              },
+            )
+          }
         }
         Text(
           "Shows a big red warning card over the screen while a flagged " +
             "call rings (also for WhatsApp/SMS warnings). Needs the " +
-            "'Display over other apps' permission — used only to draw " +
-            "this card; tap it to dismiss.",
+            "'Display over other apps' / 'Appear on top' permission — used " +
+            "only to draw this card; tap it to dismiss.",
           style = MaterialTheme.typography.bodySmall,
         )
+        if (overlayPref && !overlayGranted) {
+          Text(
+            "Permission not granted yet — the badge cannot appear. Tap " +
+              "GRANT and enable OpenCaller in the system list.",
+            style = MaterialTheme.typography.bodySmall,
+          )
+        }
+        if (BuildConfig.DEBUG) {
+          TextButton(onClick = {
+            overlayRefresh++
+            when {
+              !android.provider.Settings.canDrawOverlays(context) ->
+                android.widget.Toast.makeText(
+                  context,
+                  "Blocked: overlay permission NOT granted",
+                  android.widget.Toast.LENGTH_LONG,
+                ).show()
+              !Prefs.overlayEnabled(context) ->
+                android.widget.Toast.makeText(
+                  context,
+                  "Blocked: badge toggle is OFF",
+                  android.widget.Toast.LENGTH_LONG,
+                ).show()
+              else -> OverlayWarning.show(
+                context,
+                "⚠ Spam call silenced",
+                "+1 828-300-3919 — debt-collection — 1 report(s)",
+              )
+            }
+          }) { Text("Test badge (debug)") }
+        }
       }
     }
 

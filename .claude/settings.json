@@ -1,0 +1,32 @@
+{
+  "enabledPlugins": {
+    "elements-of-style@superpowers-marketplace": true
+  },
+  "attribution": {
+    "commit": "",
+    "pr": "",
+    "sessionUrl": false
+  },
+  "permissions": {
+    "allow": [
+      "Bash(cargo build:*)",
+      "Bash(cargo check:*)",
+      "Bash(cargo clippy:*)",
+      "Bash(cargo doc:*)",
+      "Bash(cargo fmt:*)",
+      "Bash(cargo test:*)",
+      "Bash(cargo tree:*)",
+      "Bash(cargo metadata:*)",
+      "Bash(dx build:*)",
+      "Bash(dx check:*)",
+      "Bash(./scripts/verify.sh)",
+      "Bash(./scripts/build-web.sh)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git show:*)",
+      "Bash(git add:*)"
+    ],
+    "deny": []
+  }
+}
