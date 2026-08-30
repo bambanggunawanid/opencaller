@@ -57,6 +57,14 @@ jobs:
         run: |
           cd ios
           app="build/Release-iphoneos/OpenCaller.app"
+          # Diagnostics + normalization: codesign rejects symlinked or
+          # oddly-copied resource dirs ("unsuitable ... In subcomponent").
+          find "$app" -maxdepth 2 \( -type l -o -type d \) -ls
+          # Replace any symlinked resource dirs with real copies.
+          find "$app" -maxdepth 1 -type l | while read -r link; do
+            real=$(readlink -f "$link"); rm "$link"; cp -R "$real" "$link"
+          done
+          xattr -cr "$app"
           # Ad-hoc signatures (no certificate needed) carrying the App
           # Group entitlements, inside-out — so sideloading tools can read
           # and remap the entitlements when they re-sign on install.
