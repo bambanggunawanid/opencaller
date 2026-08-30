@@ -19,7 +19,7 @@ struct SettingsView: View {
   var body: some View {
     NavigationView {
       List {
-        Section(header: Text("Block calls from")) {
+        Section {
           ForEach(0..<categoryNames.count, id: \.self) { i in
             Toggle(
               categoryNames[i],
@@ -32,6 +32,8 @@ struct SettingsView: View {
                 }
               ))
           }
+        } header: {
+          Text("Block calls from")
         } footer: {
           Text(
             "Categories left off still show a warning label on the call screen — the call rings and you decide. Blocked categories never ring."
