@@ -140,7 +140,11 @@ fun HomeScreen() {
     item { Text("Country databases", style = MaterialTheme.typography.titleMedium) }
     item {
       var enabled by remember { mutableStateOf(Prefs.enabledCountries(context)) }
-      val infos = remember(enabled) { DbManager.shardInfos().associateBy { it.country } }
+      // Re-read after toggles AND after updates (field bug: row showed the
+      // stale pre-update shard while the status card showed the new one).
+      val infos = remember(enabled, updateStatus) {
+        DbManager.shardInfos().associateBy { it.country }
+      }
       Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         for (cc in Prefs.AVAILABLE_SHARDS.sorted()) {
           val info = infos[cc]
