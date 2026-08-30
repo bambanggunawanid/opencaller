@@ -58,6 +58,12 @@ class ScreeningService : CallScreeningService() {
     }
     respondToCall(callDetails, response)
 
+    // F1 label: show WHY. Skip unknowns (noise), user-allows (already the
+    // user's decision), and silence-unknown mode (a mode, not a verdict).
+    if (detail != null && detail != "user-allow" && detail != "unknown-mode") {
+      Notifier.postVerdict(this, number, action, detail)
+    }
+
     DbManager.logEvent(
       this,
       number,

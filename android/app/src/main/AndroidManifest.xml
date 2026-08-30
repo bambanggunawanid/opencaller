@@ -7,6 +7,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
   <uses-permission android:name="android.permission.INTERNET" />
+  <!-- F1 label surface: heads-up warnings for flagged/blocked calls. -->
+  <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
   <application
     android:label="OpenCaller"

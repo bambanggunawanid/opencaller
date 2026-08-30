@@ -55,6 +55,20 @@ fun HomeScreen() {
     roleHeld = roleManager?.isRoleHeld(RoleManager.ROLE_CALL_SCREENING) == true
   }
 
+  // F1 warnings need POST_NOTIFICATIONS on Android 13+.
+  val notifLauncher = rememberLauncherForActivityResult(
+    ActivityResultContracts.RequestPermission(),
+  ) {}
+  androidx.compose.runtime.LaunchedEffect(Unit) {
+    Notifier.ensureChannel(context)
+    if (android.os.Build.VERSION.SDK_INT >= 33 &&
+      context.checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) !=
+      android.content.pm.PackageManager.PERMISSION_GRANTED
+    ) {
+      notifLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+    }
+  }
+
   var query by remember { mutableStateOf("") }
   var result by remember { mutableStateOf<String?>(null) }
   var updateStatus by remember { mutableStateOf<String?>(null) }
