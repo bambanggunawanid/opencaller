@@ -15,7 +15,8 @@ permissions:
 
 jobs:
   ipa:
-    runs-on: macos-14
+    # macos-15 = Xcode 16, required by current xcodegen's project format.
+    runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
 
