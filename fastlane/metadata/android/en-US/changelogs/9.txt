@@ -1,0 +1,3 @@
+Debug builds now explain themselves: when a simulated (or real) call or
+SMS produces no warning, the Activity tab records exactly why — matched
+an allow rule, not in the database, or warned less than a minute ago.

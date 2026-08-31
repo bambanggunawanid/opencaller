@@ -97,7 +97,10 @@ class CallNotificationListener : NotificationListenerService() {
       }
       return
     }
-    if (!shouldProcess(digits)) return
+    if (!shouldProcess(digits)) {
+      debugTrace(digits, "call-skipped:already-warned-within-60s")
+      return
+    }
 
     val ruleVerdict = RuleEngine.evaluate(
       number = digits,
@@ -105,7 +108,12 @@ class CallNotificationListener : NotificationListenerService() {
       allowRules = Prefs.allowRules(this),
       blockRules = Prefs.blockRules(this),
     )
-    if (ruleVerdict == RuleEngine.Verdict.ALLOW) return
+    if (ruleVerdict == RuleEngine.Verdict.ALLOW) {
+      // Debug builds surface silent outcomes in the Activity tab —
+      // "nothing happened" must be distinguishable from "broken".
+      debugTrace(digits, "call-skipped:matches-your-ALLOW-rule")
+      return
+    }
 
     val detail = if (ruleVerdict == RuleEngine.Verdict.BLOCK) {
       "user-block"
@@ -114,7 +122,10 @@ class CallNotificationListener : NotificationListenerService() {
       hit?.let { "${it.category}:${it.reportCount}" }
         ?: NativeCore.nativeHeuristic(digits, Prefs.ownNumber(this))
           ?.let { "heuristic:$it" }
-    } ?: return
+    } ?: run {
+      debugTrace(digits, "call-skipped:not-in-db-no-heuristic")
+      return
+    }
 
     val what = L10n.str(this, R.string.what_app_call, appLabel)
     Notifier.postVerdict(this, title.trim(), Prefs.Action.ALLOW, detail, what)
@@ -140,7 +151,10 @@ class CallNotificationListener : NotificationListenerService() {
       allowRules = Prefs.allowRules(this),
       blockRules = Prefs.blockRules(this),
     )
-    if (ruleVerdict == RuleEngine.Verdict.ALLOW) return
+    if (ruleVerdict == RuleEngine.Verdict.ALLOW) {
+      debugTrace(digits ?: title, "sms-skipped:matches-your-ALLOW-rule")
+      return
+    }
 
     var muteEligible = ruleVerdict == RuleEngine.Verdict.BLOCK
     val detail = if (ruleVerdict == RuleEngine.Verdict.BLOCK) {
@@ -152,7 +166,10 @@ class CallNotificationListener : NotificationListenerService() {
           "${hit.category}:${hit.reportCount}"
         }
       }
-    } ?: return
+    } ?: run {
+      debugTrace(digits ?: title, "sms-skipped:not-in-db-no-rule")
+      return
+    }
 
     val key = digits ?: title.lowercase()
     if (mode == Prefs.SmsMode.MUTE && muteEligible) {
@@ -174,6 +191,11 @@ class CallNotificationListener : NotificationListenerService() {
       )
       DbManager.logEvent(this, key, "warned:sms:$detail")
     }
+  }
+
+  /** Debug builds: make silent decisions visible in the Activity tab. */
+  private fun debugTrace(key: String, why: String) {
+    if (BuildConfig.DEBUG) DbManager.logEvent(this, key, "debug:$why")
   }
 
   /** Warn at most once per sender per minute (apps repost while ringing). */
