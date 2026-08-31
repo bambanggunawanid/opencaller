@@ -68,6 +68,14 @@
   <string name="overlay_footer">OpenCaller • ketuk untuk menutup</string>
   <string name="warning_footer">OpenCaller • ketuk di mana saja untuk menutup</string>
 
+  <!-- Kartu selesaikan penyiapan (tab Perisai) -->
+  <string name="setup_title">Selesaikan penyiapan</string>
+  <string name="setup_body">Perlindungan menyala sejak awal — izin berikut adalah satu-satunya hal yang tidak boleh dinyalakan sendiri oleh aplikasi menurut Android.</string>
+  <string name="setup_role">Aktifkan penyaringan panggilan (wajib)</string>
+  <string name="setup_overlay">Izinkan peringatan besar di layar</string>
+  <string name="setup_listener">Perlindungan panggilan WhatsApp &amp; SMS (opsional)</string>
+  <string name="setup_later">Nanti</string>
+
   <!-- Pembaruan database -->
   <string name="sync_never_title">Daftar spam Anda belum pernah disinkronkan</string>
   <string name="sync_stale_title">Daftar spam Anda sudah usang</string>

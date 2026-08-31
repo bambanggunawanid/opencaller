@@ -20,9 +20,14 @@ object Prefs {
     "sms-spam",
   )
 
-  /** Large on-screen overlay badge during flagged calls (opt-in). */
+  /**
+   * Large on-screen overlay badge during flagged calls. ON by default —
+   * the app must arrive armed; only the permission grant itself is the
+   * user's step (Android forbids self-granting). Until granted, warnings
+   * fall back to heads-up notifications.
+   */
   fun overlayEnabled(context: Context): Boolean =
-    prefs(context).getBoolean("overlay_warning", false)
+    prefs(context).getBoolean("overlay_warning", true)
 
   fun setOverlayEnabled(context: Context, on: Boolean) {
     prefs(context).edit().putBoolean("overlay_warning", on).apply()
@@ -32,8 +37,10 @@ object Prefs {
   enum class SmsMode { OFF, WARN, MUTE }
 
   fun smsMode(context: Context): SmsMode {
-    val raw = prefs(context).getString("sms_mode", null) ?: return SmsMode.OFF
-    return runCatching { SmsMode.valueOf(raw) }.getOrDefault(SmsMode.OFF)
+    // WARN by default: inert until the user grants notification access,
+    // then SMS protection works with zero further toggles.
+    val raw = prefs(context).getString("sms_mode", null) ?: return SmsMode.WARN
+    return runCatching { SmsMode.valueOf(raw) }.getOrDefault(SmsMode.WARN)
   }
 
   fun setSmsMode(context: Context, mode: SmsMode) {
@@ -152,6 +159,14 @@ object Prefs {
 
   fun setWangiriEnabled(context: Context, on: Boolean) {
     prefs(context).edit().putBoolean("wangiri_learn", on).apply()
+  }
+
+  /** "Later" on the optional setup row (notification access) hides it. */
+  fun setupOptionalHidden(context: Context): Boolean =
+    prefs(context).getBoolean("setup_optional_hidden", false)
+
+  fun setSetupOptionalHidden(context: Context, hidden: Boolean) {
+    prefs(context).edit().putBoolean("setup_optional_hidden", hidden).apply()
   }
 
   /** Millis of the last successful shard sync from the network (0 = never). */

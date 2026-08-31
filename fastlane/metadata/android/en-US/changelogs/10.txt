@@ -1,0 +1,5 @@
+Ready to use out of the box: the call-screening request appears
+immediately on first launch, the on-screen warning badge and SMS
+protection are on by default (they activate the moment their permission
+is granted), and a "Finish setup" card on the Shield tab lists the few
+remaining one-tap grants Android requires — it disappears when done.

@@ -1,6 +1,9 @@
 package dev.opencaller.app
 
 import android.app.role.RoleManager
+import android.content.Intent
+import android.net.Uri
+import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
@@ -27,6 +30,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -34,6 +38,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.core.app.NotificationManagerCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -59,6 +67,42 @@ fun ShieldScreen(onOpenActivity: () -> Unit) {
   ) {
     roleHeld = roleManager?.isRoleHeld(RoleManager.ROLE_CALL_SCREENING) == true
   }
+  val requestRole = {
+    roleManager
+      ?.createRequestRoleIntent(RoleManager.ROLE_CALL_SCREENING)
+      ?.let { roleLauncher.launch(it) } ?: Unit
+  }
+
+  // The app must arrive armed: fire the one-tap system dialog immediately
+  // on launch instead of hiding it behind a button (once per launch — a
+  // decline still leaves the setup card and hero button).
+  var autoAsked by rememberSaveable { mutableStateOf(false) }
+  LaunchedEffect(Unit) {
+    if (!roleHeld && !autoAsked) {
+      autoAsked = true
+      requestRole()
+    }
+  }
+
+  // Grant states re-check when the user returns from system settings.
+  var setupTick by remember { mutableIntStateOf(0) }
+  val lifecycleOwner = LocalLifecycleOwner.current
+  DisposableEffect(lifecycleOwner) {
+    val obs = LifecycleEventObserver { _, event ->
+      if (event == Lifecycle.Event.ON_RESUME) {
+        setupTick++
+        roleHeld = roleManager?.isRoleHeld(RoleManager.ROLE_CALL_SCREENING) == true
+      }
+    }
+    lifecycleOwner.lifecycle.addObserver(obs)
+    onDispose { lifecycleOwner.lifecycle.removeObserver(obs) }
+  }
+  val overlayGranted = remember(setupTick) { Settings.canDrawOverlays(context) }
+  val listenerOn = remember(setupTick) {
+    NotificationManagerCompat.getEnabledListenerPackages(context)
+      .contains(context.packageName)
+  }
+  var optionalHidden by remember { mutableStateOf(Prefs.setupOptionalHidden(context)) }
 
   // Sync state drives both the friendly update banner and the hero card's
   // DB line (which must refresh after a successful sync).
@@ -140,11 +184,60 @@ fun ShieldScreen(onOpenActivity: () -> Unit) {
               stringResource(R.string.shield_role_explain),
               style = MaterialTheme.typography.bodyMedium,
             )
-            Button(onClick = {
-              roleManager
-                ?.createRequestRoleIntent(RoleManager.ROLE_CALL_SCREENING)
-                ?.let { roleLauncher.launch(it) }
-            }) { Text(stringResource(R.string.shield_enable)) }
+            Button(onClick = requestRole) { Text(stringResource(R.string.shield_enable)) }
+          }
+        }
+      }
+    }
+
+    // Finish-setup card: only the grants Android forbids an app from
+    // switching on itself, each one tap, gone once complete.
+    val overlayMissing = Prefs.overlayEnabled(context) && !overlayGranted
+    val optionalMissing = !listenerOn && !optionalHidden
+    if (!roleHeld || overlayMissing || optionalMissing) {
+      item {
+        OutlinedCard(Modifier.fillMaxWidth()) {
+          Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(
+              stringResource(R.string.setup_title),
+              style = MaterialTheme.typography.titleMedium,
+            )
+            Text(
+              stringResource(R.string.setup_body),
+              style = MaterialTheme.typography.bodySmall,
+            )
+            if (!roleHeld) {
+              TextButton(onClick = requestRole) {
+                Text(stringResource(R.string.setup_role))
+              }
+            }
+            if (overlayMissing) {
+              TextButton(onClick = {
+                context.startActivity(
+                  Intent(
+                    Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                    Uri.parse("package:${context.packageName}"),
+                  ),
+                )
+              }) { Text(stringResource(R.string.setup_overlay)) }
+            }
+            if (optionalMissing) {
+              Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+              ) {
+                TextButton(onClick = {
+                  context.startActivity(
+                    Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS),
+                  )
+                }) { Text(stringResource(R.string.setup_listener)) }
+                TextButton(onClick = {
+                  optionalHidden = true
+                  Prefs.setSetupOptionalHidden(context, true)
+                }) { Text(stringResource(R.string.setup_later)) }
+              }
+            }
           }
         }
       }

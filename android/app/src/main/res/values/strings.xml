@@ -70,6 +70,14 @@
   <string name="overlay_footer">OpenCaller • tap to dismiss</string>
   <string name="warning_footer">OpenCaller • tap anywhere to dismiss</string>
 
+  <!-- Finish-setup card (Shield tab) -->
+  <string name="setup_title">Finish setup</string>
+  <string name="setup_body">Protection is on by default — these grants are the only things Android won\'t let an app switch on by itself.</string>
+  <string name="setup_role">Turn on call screening (required)</string>
+  <string name="setup_overlay">Allow the large on-screen warning</string>
+  <string name="setup_listener">WhatsApp call &amp; SMS protection (optional)</string>
+  <string name="setup_later">Later</string>
+
   <!-- Database updates -->
   <string name="sync_never_title">Your spam list hasn\'t synced yet</string>
   <string name="sync_stale_title">Your spam list is out of date</string>
