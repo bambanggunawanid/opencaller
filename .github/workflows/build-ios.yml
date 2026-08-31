@@ -90,5 +90,15 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          # The release is created by the Android release-apk workflow,
+          # which may still be running — wait for it, then fall back to
+          # creating the release ourselves.
+          for i in $(seq 1 30); do
+            gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 && break
+            sleep 20
+          done
           gh release upload "$GITHUB_REF_NAME" \
-            ios/opencaller-ios-unsigned.ipa --clobber
+            ios/opencaller-ios-unsigned.ipa --clobber \
+            || gh release create "$GITHUB_REF_NAME" \
+              --notes "OpenCaller $GITHUB_REF_NAME" \
+              ios/opencaller-ios-unsigned.ipa
